@@ -36,8 +36,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Protected route for Concierge to view parking requests
-router.get('/dashboard', auth, restrictTo('Concierge'), async (req, res) => {
+// Protected route for Concierge and Owners to view parking requests
+router.get('/dashboard', auth, restrictTo('Concierge', 'Owner'), async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -45,14 +45,22 @@ router.get('/dashboard', auth, restrictTo('Concierge'), async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get all active requests for today
+    // Base query for active requests
+    const baseQuery = {
+      createdAt: {
+        gte: today,
+        lt: tomorrow
+      }
+    };
+
+    // If user is Owner, only show their unit's requests
+    if (req.user.role === 'Owner') {
+      baseQuery.unit = req.user.unit; // We'll need to add unit to User model
+    }
+
+    // Get all active requests
     const activeRequests = await prisma.visitorParkingRequest.findMany({
-      where: {
-        createdAt: {
-          gte: today,
-          lt: tomorrow
-        }
-      },
+      where: baseQuery,
       orderBy: {
         createdAt: 'desc'
       }
@@ -120,7 +128,8 @@ router.get('/dashboard', auth, restrictTo('Concierge'), async (req, res) => {
     }));
 
     res.json({
-      requests: processedRequests
+      requests: processedRequests,
+      userRole: req.user.role
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

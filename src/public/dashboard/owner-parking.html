@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrataDesk - Owner Parking Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .expired {
+            background-color: #fff3cd !important;
+        }
+        .violation {
+            background-color: #f8d7da !important;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">StrataDesk</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard/owner-parking">My Unit's Parking</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" onclick="logout()">Logout</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>My Unit's Parking Requests</h1>
+        <div class="alert alert-info">
+            <strong>Note:</strong> This dashboard shows all visitor parking requests for your unit.
+        </div>
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle Make</th>
+                                <th>Plate Number</th>
+                                <th>Duration</th>
+                                <th>Created At</th>
+                                <th>Expires At</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parkingTable">
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/auth/login';
+        }
+
+        // Fetch and display parking requests
+        async function fetchParkingRequests() {
+            try {
+                const response = await fetch('/visitor/dashboard', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+
+                const data = await response.json();
+                
+                // Verify user is an Owner
+                if (data.userRole !== 'Owner') {
+                    window.location.href = '/dashboard/visitor-parking';
+                    return;
+                }
+
+                const tableBody = document.getElementById('parkingTable');
+                tableBody.innerHTML = '';
+
+                data.requests.forEach(request => {
+                    const row = document.createElement('tr');
+                    
+                    // Add classes based on status
+                    if (request.isExpired) {
+                        row.classList.add('expired');
+                    }
+                    if (request.violationStatus === 'VIOLATION') {
+                        row.classList.add('violation');
+                    }
+
+                    row.innerHTML = `
+                        <td>${request.vehicleMake}</td>
+                        <td>${request.plateNumber}</td>
+                        <td>${request.durationInHours} hours</td>
+                        <td>${new Date(request.createdAt).toLocaleString()}</td>
+                        <td>${new Date(request.expiresAt).toLocaleString()}</td>
+                        <td>
+                            ${request.isExpired ? '<span class="badge bg-warning">Expired</span>' : ''}
+                            ${request.violationStatus === 'VIOLATION' ? '<span class="badge bg-danger">Violation</span>' : ''}
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching parking requests:', error);
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/auth/login';
+        }
+
+        // Initial fetch
+        fetchParkingRequests();
+
+        // Refresh every minute
+        setInterval(fetchParkingRequests, 60000);
+    </script>
+</body>
+</html> 

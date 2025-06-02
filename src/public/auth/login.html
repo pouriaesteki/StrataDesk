@@ -66,6 +66,8 @@
                     // Redirect based on role
                     if (result.user.role === 'Concierge') {
                         window.location.href = '/dashboard/visitor-parking';
+                    } else if (result.user.role === 'Owner') {
+                        window.location.href = '/dashboard/owner-parking';
                     } else {
                         window.location.href = '/dashboard';
                     }

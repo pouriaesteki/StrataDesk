@@ -39,7 +39,20 @@ app.get('/', (req, res) => {
   });
 });
 
-// Routes
+// HTML Routes
+app.get('/visitor', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'visitor.html'));
+});
+
+app.get('/auth/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'auth', 'login.html'));
+});
+
+app.get('/dashboard/visitor-parking', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard', 'visitor-parking.html'));
+});
+
+// API Routes
 app.use('/auth', authRoutes);
 app.use('/visitor', visitorParkingRoutes);
 

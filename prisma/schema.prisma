@@ -25,6 +25,7 @@ model User {
   email     String   @unique
   password  String
   role      UserRole
+  unit      String?  // Optional unit number for Owners
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
