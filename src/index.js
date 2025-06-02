@@ -2,9 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const authRoutes = require('./routes/auth');
+const visitorParkingRoutes = require('./routes/visitorParking');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -13,6 +15,9 @@ const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev')); // Logging middleware
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Root route
 app.get('/', (req, res) => {
@@ -25,6 +30,10 @@ app.get('/', (req, res) => {
         login: 'POST /auth/login',
         me: 'GET /auth/me'
       },
+      visitor: {
+        register: 'POST /visitor/register',
+        dashboard: 'GET /visitor/dashboard'
+      },
       health: 'GET /health'
     }
   });
@@ -32,6 +41,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/visitor', visitorParkingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
