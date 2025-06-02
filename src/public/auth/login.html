@@ -62,15 +62,10 @@
                 if (response.ok) {
                     // Store token
                     localStorage.setItem('token', result.token);
+                    localStorage.setItem('userEmail', result.user.email);
                     
-                    // Redirect based on role
-                    if (result.user.role === 'Concierge') {
-                        window.location.href = '/dashboard/visitor-parking';
-                    } else if (result.user.role === 'Owner') {
-                        window.location.href = '/dashboard/owner-parking';
-                    } else {
-                        window.location.href = '/dashboard';
-                    }
+                    // Redirect all users to main dashboard
+                    window.location.href = '/dashboard';
                 } else {
                     alert('Error: ' + result.error);
                 }
