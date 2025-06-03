@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 const isOwner = restrictTo('Owner');
 
 // Get all users (except main owner)
-router.get('/users', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
+router.get('/users', auth, restrictTo(['Owner', 'StrataManager', 'Council']), async (req, res) => {
   try {
     console.log('IAM USERS: req.user:', req.user);
     const users = await prisma.user.findMany({

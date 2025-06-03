@@ -24,7 +24,7 @@ const auth = async (req, res, next) => {
     req.token = token;
     next();
   } catch (error) {
-    console.error('AUTH ERROR:', error.message, '| JWT_SECRET:', process.env.JWT_SECRET);
+    console.error('AUTH ERROR:', error, '| JWT_SECRET:', process.env.JWT_SECRET);
     res.status(401).json({ error: 'Please authenticate.', details: error.message });
   }
 };
