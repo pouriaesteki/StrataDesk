@@ -21,13 +21,17 @@ enum ViolationStatus {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      UserRole
-  unit      String?  // Optional unit number for Owners
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  firstName         String    @default("")
+  lastName          String    @default("")
+  role              UserRole    @default(Concierge)
+  unit              String?     // Optional unit number for Owners
+  resetToken        String?     // Token for password reset
+  resetTokenExpiry  DateTime?   // When the reset token expires
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 model VisitorParkingRequest {
@@ -40,4 +44,11 @@ model VisitorParkingRequest {
   expiresAt      DateTime
   violationStatus ViolationStatus @default(NONE)
   isExpired      Boolean         @default(false)
+}
+
+enum Role {
+  Owner
+  Concierge
+  Council
+  PropertyManager
 } 
