@@ -31,7 +31,7 @@ router.get('/users', auth, restrictTo(['Owner', 'StrataManager', 'Council']), as
 });
 
 // Get single user
-router.get('/users/:id', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
+router.get('/users/:id', auth, restrictTo(['Owner', 'StrataManager', 'Council']), async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
@@ -56,7 +56,7 @@ router.get('/users/:id', auth, restrictTo(['Owner', 'StrataManager']), async (re
 });
 
 // Create new user
-router.post('/users', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
+router.post('/users', auth, restrictTo(['Owner', 'StrataManager', 'Council']), async (req, res) => {
   try {
     const { email, password, firstName, lastName, role } = req.body;
 
@@ -99,7 +99,7 @@ router.post('/users', auth, restrictTo(['Owner', 'StrataManager']), async (req, 
 });
 
 // Update user
-router.put('/users/:id', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
+router.put('/users/:id', auth, restrictTo(['Owner', 'StrataManager', 'Council']), async (req, res) => {
   try {
     const { email, firstName, lastName, role, password } = req.body;
     const userId = req.params.id;
@@ -159,7 +159,7 @@ router.put('/users/:id', auth, restrictTo(['Owner', 'StrataManager']), async (re
 });
 
 // Delete user
-router.delete('/users/:id', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
+router.delete('/users/:id', auth, restrictTo(['Owner', 'StrataManager', 'Council']), async (req, res) => {
   try {
     const userId = req.params.id;
 
