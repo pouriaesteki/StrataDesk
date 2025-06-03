@@ -8,7 +8,7 @@ const auth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      throw new Error();
+      throw new Error('No token provided');
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -17,14 +17,15 @@ const auth = async (req, res, next) => {
     });
 
     if (!user) {
-      throw new Error();
+      throw new Error('User not found');
     }
 
     req.user = user;
     req.token = token;
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Please authenticate.' });
+    console.error('AUTH ERROR:', error.message, '| JWT_SECRET:', process.env.JWT_SECRET);
+    res.status(401).json({ error: 'Please authenticate.', details: error.message });
   }
 };
 

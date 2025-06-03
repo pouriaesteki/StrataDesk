@@ -12,7 +12,7 @@ const isOwner = restrictTo('Owner');
 // Get all users (except main owner)
 router.get('/users', auth, restrictTo(['Owner', 'StrataManager']), async (req, res) => {
   try {
-    console.log('Fetching users...');
+    console.log('IAM USERS: req.user:', req.user);
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -23,7 +23,6 @@ router.get('/users', auth, restrictTo(['Owner', 'StrataManager']), async (req, r
         createdAt: true
       }
     });
-    console.log('Users fetched:', users);
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
