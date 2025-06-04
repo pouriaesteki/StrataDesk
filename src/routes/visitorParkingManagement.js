@@ -49,8 +49,72 @@ router.get('/permits', auth, async (req, res) => {
 
 // POST /visitor/inspection - Patrol & Inspection
 router.post('/inspection', auth, upload.single('photo'), async (req, res) => {
-  // TODO: Implement inspection logic, violation check, and photo upload
-  res.json({ message: 'Inspection endpoint (to be implemented)' });
+  try {
+    const { plateNumber, vehicleMake, vehicleColor, stallNumber, notes } = req.body;
+    const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const inspectorId = req.user.id;
+
+    // Validate required fields
+    if (!plateNumber || !vehicleMake || !vehicleColor || !stallNumber) {
+      return res.status(400).json({ error: 'Missing required fields.' });
+    }
+
+    // 1. Check for valid permit
+    const now = new Date();
+    const permit = await prisma.visitorParkingRequest.findFirst({
+      where: {
+        plateNumber: { equals: plateNumber, mode: 'insensitive' },
+        isExpired: false,
+        expiresAt: { gte: now }
+      }
+    });
+
+    // 2. Check for previous violations
+    const previousViolation = await prisma.violation.findFirst({
+      where: { plateNumber: { equals: plateNumber, mode: 'insensitive' } }
+    });
+
+    let violation = null;
+    if (!permit || previousViolation) {
+      // 3. Create violation
+      violation = await prisma.violation.create({
+        data: {
+          permitId: permit ? permit.id : null,
+          plateNumber,
+          vehicleMake,
+          vehicleColor,
+          stallNumber,
+          photoUrl,
+          violationType: !permit ? 'No Permit' : 'Previous Violation',
+          notes,
+          noticeIssued: false
+        }
+      });
+    }
+
+    // 4. Create inspection record
+    const inspection = await prisma.parkingInspection.create({
+      data: {
+        inspectorId,
+        plateNumber,
+        vehicleMake,
+        vehicleColor,
+        stallNumber,
+        photoUrl,
+        notes,
+        violationId: violation ? violation.id : null
+      }
+    });
+
+    res.json({
+      inspection,
+      violation,
+      permit
+    });
+  } catch (error) {
+    console.error('Error during inspection:', error);
+    res.status(500).json({ error: 'Failed to process inspection.' });
+  }
 });
 
 // POST /visitor/violation/:id/letter - Generate violation letter PDF
