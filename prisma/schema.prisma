@@ -44,6 +44,46 @@ model VisitorParkingRequest {
   expiresAt      DateTime
   violationStatus ViolationStatus @default(NONE)
   isExpired      Boolean         @default(false)
+  violations     Violation[]     // New relation
+}
+
+model Violation {
+  id                String   @id @default(uuid())
+  permitId          String?  // nullable if no permit
+  plateNumber       String
+  vehicleMake       String
+  vehicleColor      String
+  stallNumber       String
+  photoUrl          String?
+  violationType     String   // e.g. "No Permit", "Expired", etc.
+  notes             String?
+  issuedAt          DateTime @default(now())
+  noticeIssued      Boolean  @default(false)
+  letter            ViolationLetter?
+  permit            VisitorParkingRequest? @relation(fields: [permitId], references: [id])
+  inspections       ParkingInspection[] @relation("ViolationToInspection")
+}
+
+model ViolationLetter {
+  id           String   @id @default(uuid())
+  violationId  String   @unique
+  pdfUrl       String   // path to PDF file
+  createdAt    DateTime @default(now())
+  violation    Violation @relation(fields: [violationId], references: [id])
+}
+
+model ParkingInspection {
+  id           String   @id @default(uuid())
+  inspectorId  String   // user id of staff
+  inspectedAt  DateTime @default(now())
+  plateNumber  String
+  vehicleMake  String
+  vehicleColor String
+  stallNumber  String
+  photoUrl     String?
+  notes        String?
+  violationId  String?  // link if this inspection resulted in a violation
+  violation    Violation? @relation("ViolationToInspection", fields: [violationId], references: [id])
 }
 
 enum Role {

@@ -9,6 +9,7 @@ const { PrismaClient } = require('@prisma/client');
 const authRoutes = require('./routes/auth');
 const visitorParkingRoutes = require('./routes/visitorParking');
 const iamRoutes = require('./routes/iam');
+const visitorParkingManagementRoutes = require('./routes/visitorParkingManagement');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -72,6 +73,7 @@ app.get('/dashboard/visitor-parking', (req, res) => {
 app.use('/auth', authRoutes);
 app.use('/visitor-parking', visitorParkingRoutes);
 app.use('/iam', iamRoutes);
+app.use('/visitor-management', visitorParkingManagementRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
