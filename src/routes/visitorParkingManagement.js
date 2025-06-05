@@ -210,10 +210,31 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
 });
 
 // GET /visitor/violation/:id/letter - Download violation letter PDF
-router.get('/violation/:id/letter', auth, async (req, res) => {
-  // TODO: Implement violation letter download
-  res.json({ message: 'Violation letter download endpoint (to be implemented)' });
-});
+   router.get('/violations', auth, async (req, res) => {
+     try {
+       const { startDate, endDate, onlyViolations } = req.query;
+       const where = {};
+       if (startDate || endDate) {
+         where.issuedAt = {};
+         if (startDate) where.issuedAt.gte = new Date(startDate);
+         if (endDate) where.issuedAt.lte = new Date(endDate);
+       }
+       if (onlyViolations === 'true') {
+         where.violationType = { not: 'WARNING' };
+       }
+       const violations = await prisma.violation.findMany({
+         where,
+         orderBy: { issuedAt: 'desc' },
+         include: {
+           letter: true,
+         },
+       });
+       res.json({ violations });
+     } catch (error) {
+       console.error('Error fetching violations:', error);
+       res.status(500).json({ error: 'Failed to fetch violations' });
+     }
+   });
 
 // GET /visitor-management/violations - Violation Report with filters
 router.get('/violations', auth, async (req, res) => {
