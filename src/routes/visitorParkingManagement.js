@@ -146,7 +146,7 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
 
     // Generate PDF
     const doc = new PDFDocument();
-    const pdfDir = path.join(__dirname, '..', '..', 'uploads', 'letters');
+    const pdfDir = path.join(process.cwd(), 'uploads', 'letters');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
     const pdfPath = path.join(pdfDir, `${violationId}.pdf`);
     const pdfUrl = `/uploads/letters/${violationId}.pdf`;

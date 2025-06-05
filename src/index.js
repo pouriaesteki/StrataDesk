@@ -21,7 +21,7 @@ app.use(morgan('dev')); // Logging middleware
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Root route
 app.get('/', (req, res) => {
