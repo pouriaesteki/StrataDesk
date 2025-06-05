@@ -5,6 +5,7 @@ const { auth, restrictTo } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const csv = require('fast-csv');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -263,10 +264,55 @@ router.get('/violations', auth, async (req, res) => {
   }
 });
 
-// GET /visitor/violations/export - Export violation report
+// GET /visitor-management/violations/export - Export violation report
 router.get('/violations/export', auth, async (req, res) => {
-  // TODO: Implement export as PDF/CSV
-  res.json({ message: 'Violation Report export endpoint (to be implemented)' });
+  try {
+    const { format = 'csv', startDate, endDate, onlyViolations } = req.query;
+    const where = {};
+    if (startDate || endDate) {
+      where.issuedAt = {};
+      if (startDate) where.issuedAt.gte = new Date(startDate);
+      if (endDate) where.issuedAt.lte = new Date(endDate);
+    }
+    if (onlyViolations === 'true') {
+      where.violationType = { not: 'WARNING' };
+    }
+    const violations = await prisma.violation.findMany({
+      where,
+      orderBy: { issuedAt: 'desc' },
+      include: { letter: true },
+    });
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="violations.csv"');
+      const csvStream = csv.format({ headers: true });
+      csvStream.pipe(res);
+      violations.forEach(v => {
+        csvStream.write({
+          ID: v.id,
+          Plate: v.plateNumber,
+          Make: v.vehicleMake,
+          Color: v.vehicleColor,
+          Stall: v.stallNumber,
+          Type: v.violationType,
+          Notes: v.notes || '',
+          IssuedAt: v.issuedAt,
+          NoticeIssued: v.noticeIssued,
+          LetterURL: v.letter ? v.letter.pdfUrl : ''
+        });
+      });
+      csvStream.end();
+    } else if (format === 'pdf') {
+      // TODO: Implement PDF export
+      res.status(501).json({ error: 'PDF export not implemented yet.' });
+    } else {
+      res.status(400).json({ error: 'Invalid format. Use csv or pdf.' });
+    }
+  } catch (error) {
+    console.error('Error exporting violations:', error);
+    res.status(500).json({ error: 'Failed to export violations' });
+  }
 });
 
 module.exports = router; 
