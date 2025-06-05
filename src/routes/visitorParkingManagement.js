@@ -131,6 +131,14 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
       return res.status(404).json({ error: 'Violation not found' });
     }
 
+    // Prevent duplicate letters
+    const existingLetter = await prisma.violationLetter.findUnique({
+      where: { violationId }
+    });
+    if (existingLetter) {
+      return res.status(400).json({ error: 'A letter for this violation already exists.', pdfUrl: existingLetter.pdfUrl });
+    }
+
     // Prepare data for the letter
     const now = new Date();
     const dateStr = now.toLocaleDateString();
