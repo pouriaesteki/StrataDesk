@@ -38,8 +38,45 @@
         </ul>
         <div class="tab-content mt-3" id="vpmTabsContent">
             <div class="tab-pane fade show active" id="parking" role="tabpanel">
-                <!-- Parking Report Table and Filters will go here -->
-                <div id="parkingReport"></div>
+                <form class="row g-3 mb-3" id="parkingFilterForm">
+                    <div class="col-md-3">
+                        <label for="filterStartDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="filterStartDate" name="startDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterEndDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="filterEndDate" name="endDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterUnit" class="form-label">Unit</label>
+                        <input type="text" class="form-control" id="filterUnit" name="unit" placeholder="Unit number">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterPlate" class="form-label">License Plate</label>
+                        <input type="text" class="form-control" id="filterPlate" name="plate" placeholder="Plate number">
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        <button type="button" class="btn btn-secondary" id="clearParkingFilters">Clear</button>
+                    </div>
+                </form>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Vehicle Make</th>
+                                <th>Plate Number</th>
+                                <th>Unit</th>
+                                <th>Duration (hrs)</th>
+                                <th>Created At</th>
+                                <th>Expires At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parkingTableBody">
+                            <!-- Data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="tab-pane fade" id="violation" role="tabpanel">
                 <!-- Violation Report Table and Filters will go here -->
@@ -53,6 +90,55 @@
             localStorage.removeItem('token');
             window.location.href = '/auth/login';
         }
+
+        // Parking Report logic
+        const token = localStorage.getItem('token');
+        async function loadParkingReport(filters = {}) {
+            let url = '/visitor-management/permits?';
+            const params = [];
+            if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+            if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+            if (filters.unit) params.push(`unit=${encodeURIComponent(filters.unit)}`);
+            if (filters.plate) params.push(`plate=${encodeURIComponent(filters.plate)}`);
+            url += params.join('&');
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('parkingTableBody');
+            tbody.innerHTML = '';
+            (data.permits || []).forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${p.vehicleMake}</td>
+                    <td>${p.plateNumber}</td>
+                    <td>${p.unit}</td>
+                    <td>${p.durationInHours}</td>
+                    <td>${new Date(p.createdAt).toLocaleString()}</td>
+                    <td>${new Date(p.expiresAt).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        document.getElementById('parkingFilterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadParkingReport({
+                startDate: document.getElementById('filterStartDate').value,
+                endDate: document.getElementById('filterEndDate').value,
+                unit: document.getElementById('filterUnit').value,
+                plate: document.getElementById('filterPlate').value
+            });
+        });
+        document.getElementById('clearParkingFilters').addEventListener('click', function() {
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterUnit').value = '';
+            document.getElementById('filterPlate').value = '';
+            loadParkingReport();
+        });
+        // Initial load
+        loadParkingReport();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
