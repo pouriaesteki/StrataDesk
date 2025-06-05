@@ -2,6 +2,9 @@ const express = require('express');
 const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
 const { auth, restrictTo } = require('../middleware/auth');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -117,10 +120,85 @@ router.post('/inspection', auth, upload.single('photo'), async (req, res) => {
   }
 });
 
-// POST /visitor/violation/:id/letter - Generate violation letter PDF
+// POST /visitor-management/violation/:id/letter
 router.post('/violation/:id/letter', auth, async (req, res) => {
-  // TODO: Implement violation letter generation and save
-  res.json({ message: 'Violation letter generation endpoint (to be implemented)' });
+  try {
+    const violationId = req.params.id;
+    const violation = await prisma.violation.findUnique({
+      where: { id: violationId }
+    });
+    if (!violation) {
+      return res.status(404).json({ error: 'Violation not found' });
+    }
+
+    // Prepare data for the letter
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const timeStr = now.toLocaleTimeString();
+
+    // Generate PDF
+    const doc = new PDFDocument();
+    const pdfDir = path.join(__dirname, '..', '..', 'uploads', 'letters');
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    const pdfPath = path.join(pdfDir, `${violationId}.pdf`);
+    const pdfUrl = `/uploads/letters/${violationId}.pdf`;
+    const stream = fs.createWriteStream(pdfPath);
+    doc.pipe(stream);
+
+    // Letter content (your provided wording)
+    doc.fontSize(16).text('PARKING VIOLATION NOTICE', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text('Strata Plan LMS-2518', { align: 'center' });
+    doc.moveDown();
+    doc.text(`Date: ${dateStr}`);
+    doc.text(`Time: ${timeStr}`);
+    doc.text(`Parking Stall #: ${violation.stallNumber}`);
+    doc.moveDown();
+    doc.text('Vehicle Details:');
+    doc.text(`• License Plate: ${violation.plateNumber}`);
+    doc.text(`• Make/Model: ${violation.vehicleMake}`);
+    doc.text(`• Color: ${violation.vehicleColor}`);
+    doc.moveDown();
+    doc.text('Violation Description:');
+    doc.text('[ ] Vehicle parked in a non-designated area');
+    doc.text('[ ] No visitor permit or resident information displayed on dashboard');
+    doc.text('[ ] Exceeded maximum time limit');
+    doc.text('[ ] Resident vehicle parked in visitor parking');
+    doc.text('[ ] Other:');
+    doc.moveDown();
+    doc.text(`Notes: ${violation.notes || ''}`);
+    doc.moveDown();
+    doc.text('This vehicle is in violation of the Visitor Parking Rules of Strata Plan LMS-2518.');
+    doc.moveDown();
+    doc.text('Visitor parking is strictly reserved for guests of residents on a first-come, first-served basis. The following restrictions apply:');
+    doc.text('• Maximum of 12 hours per visit');
+    doc.text('• No more than 2 consecutive days');
+    doc.text('• No more than 7 days per month');
+    doc.text('• All visitor vehicles must clearly display the name and suite number of the resident being visited');
+    doc.moveDown();
+    doc.text('Resident vehicles are not permitted in visitor parking stalls. Prior written approval must be obtained from the Property Manager or Council for any exception.');
+    doc.moveDown();
+    doc.text('Failure to comply may result in vehicle removal (towing) at the owner\'s expense and further enforcement action under strata bylaws.');
+    doc.moveDown();
+    doc.text('Issued by:');
+    doc.text('Concierge Team');
+    doc.text('For and on behalf of Strata Council LMS-2518');
+    doc.end();
+
+    stream.on('finish', async () => {
+      // Save to DB
+      await prisma.violationLetter.create({
+        data: {
+          violationId,
+          pdfUrl
+        }
+      });
+      res.json({ pdfUrl });
+    });
+  } catch (error) {
+    console.error('Error generating violation letter:', error);
+    res.status(500).json({ error: 'Failed to generate violation letter.' });
+  }
 });
 
 // GET /visitor/violation/:id/letter - Download violation letter PDF
