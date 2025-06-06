@@ -75,7 +75,7 @@
         // Fetch and display parking requests
         async function fetchParkingRequests() {
             try {
-                const response = await fetch('/visitor/dashboard', {
+                const response = await fetch('/visitor-management/permits', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
