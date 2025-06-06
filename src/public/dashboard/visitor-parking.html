@@ -90,7 +90,7 @@
                 const tableBody = document.getElementById('parkingTable');
                 tableBody.innerHTML = '';
 
-                data.requests.forEach(request => {
+                (data.permits || []).forEach(request => {
                     const row = document.createElement('tr');
                     
                     // Add classes based on status
