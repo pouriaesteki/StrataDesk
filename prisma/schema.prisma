@@ -24,6 +24,7 @@ model User {
   resetTokenExpiry  DateTime?   // When the reset token expires
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+  patrolLogs        PatrolLog[]
 }
 
 model VisitorParkingRequest {
@@ -124,4 +125,16 @@ model StorageWaitlistEntry {
   requestDate DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model PatrolLog {
+  id                String    @id @default(uuid())
+  reportedAt        DateTime
+  notes             String
+  photoUrl          String?
+  isNothingToReport Boolean   @default(false)
+  reporterId        String
+  reporter          User      @relation(fields: [reporterId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 } 
