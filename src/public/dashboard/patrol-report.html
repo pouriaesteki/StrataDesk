@@ -37,7 +37,6 @@
                         <label class="form-label">Photos (Optional)</label>
                         <div class="mb-2 d-flex gap-2">
                             <input type="file" class="form-control" id="uploadFiles" accept="image/*" multiple style="max-width:200px;">
-                            <input type="file" class="form-control" id="cameraInput" accept="image/*" capture="environment" style="max-width:200px;">
                         </div>
                         <div id="photoPreview" class="mb-2 d-flex flex-wrap gap-2"></div>
                     </div>
@@ -110,13 +109,6 @@
         };
 
         document.getElementById('uploadFiles').addEventListener('change', (e) => {
-            for (const file of e.target.files) {
-                selectedImages.push(file);
-            }
-            updatePhotoPreview();
-            e.target.value = '';
-        });
-        document.getElementById('cameraInput').addEventListener('change', (e) => {
             for (const file of e.target.files) {
                 selectedImages.push(file);
             }
