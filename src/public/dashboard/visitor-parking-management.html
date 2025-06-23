@@ -58,6 +58,7 @@
                                 <th>Vehicle Make</th>
                                 <th>Plate Number</th>
                                 <th>Unit</th>
+                                <th>Slot</th>
                                 <th>Expires At</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -183,6 +184,7 @@
                     <td>${p.vehicleMake}</td>
                     <td>${p.plateNumber}</td>
                     <td>${p.unit}</td>
+                    <td>${p.stallNumber || ''}</td>
                     <td>${new Date(p.expiresAt).toLocaleString()}</td>
                     <td>${isExpired ? '<span class="badge bg-warning">Expired</span>' : '<span class="badge bg-success">Active</span>'}</td>
                     <td>
