@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // POST /patrol-report - Create a new patrol log entry
-router.post('/', auth, upload.single('photo'), async (req, res) => {
+router.post('/', auth, upload.array('photos', 10), async (req, res) => {
     try {
         const { reportedAt, notes, isNothingToReport } = req.body;
         const reporterId = req.user.id;
@@ -37,12 +37,19 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
         } else if (!notes) {
             return res.status(400).json({ error: 'Notes are required for a report with issues.' });
         }
-        
-        if (req.file) {
-            data.photoUrl = `/uploads/patrols/${req.file.filename}`;
+
+        // Create the log first
+        const newLog = await prisma.patrolLog.create({ data });
+
+        // Save all images if any
+        if (req.files && req.files.length > 0) {
+            const images = req.files.map(file => ({
+                url: `/uploads/patrols/${file.filename}`,
+                patrolLogId: newLog.id
+            }));
+            await prisma.patrolLogImage.createMany({ data: images });
         }
 
-        const newLog = await prisma.patrolLog.create({ data });
         res.status(201).json(newLog);
     } catch (error) {
         console.error('Error creating patrol log:', error);
@@ -67,7 +74,8 @@ router.get('/', auth, async (req, res) => {
             include: {
                 reporter: {
                     select: { firstName: true, lastName: true }
-                }
+                },
+                images: true
             },
             orderBy: { reportedAt: 'desc' }
         });

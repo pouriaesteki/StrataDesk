@@ -34,8 +34,8 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="photo" class="form-label">Photo (Optional)</label>
-                        <input type="file" class="form-control" id="photo">
+                        <label for="photos" class="form-label">Photo (Optional)</label>
+                        <input type="file" class="form-control" id="photos" name="photos" accept="image/*" capture="environment" multiple>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Log Entry</button>
                     <button type="button" class="btn btn-success" id="nothingToReportBtn">Nothing to Report</button>
@@ -103,11 +103,15 @@
                 if (log.isNothingToReport) {
                     row.classList.add('table-success');
                 }
+                let imagesHtml = '';
+                if (log.images && log.images.length > 0) {
+                    imagesHtml = log.images.map(img => `<a href="${img.url}" target="_blank">View</a>`).join(' | ');
+                }
                 row.innerHTML = `
                     <td>${new Date(log.reportedAt).toLocaleString()}</td>
                     <td>${log.reporter.firstName} ${log.reporter.lastName}</td>
                     <td>${log.notes}</td>
-                    <td>${log.photoUrl ? `<a href="${log.photoUrl}" target="_blank">View Photo</a>` : ''}</td>
+                    <td>${imagesHtml}</td>
                 `;
                 logsTableBody.appendChild(row);
             });
@@ -133,11 +137,10 @@
             const formData = new FormData();
             formData.append('reportedAt', reportedAtInput.value);
             formData.append('notes', document.getElementById('notes').value);
-            const photoFile = document.getElementById('photo').files[0];
-            if (photoFile) {
-                formData.append('photo', photoFile);
+            const photoFiles = document.getElementById('photos').files;
+            for (let i = 0; i < photoFiles.length; i++) {
+                formData.append('photos', photoFiles[i]);
             }
-
             await submitLog(formData);
         });
 
