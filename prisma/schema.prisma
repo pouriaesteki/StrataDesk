@@ -101,4 +101,27 @@ model ElevatorBooking {
   notes        String?
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
+}
+
+enum StorageStatus {
+  RENTED
+  VACANT
+}
+
+model StorageUnit {
+  id          String        @id @default(uuid())
+  name        String        @unique // STG1, STG2, etc.
+  status      StorageStatus @default(VACANT)
+  unitNumber  String?
+  startDate   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model StorageWaitlistEntry {
+  id          String   @id @default(uuid())
+  unitNumber  String
+  requestDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 } 

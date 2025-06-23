@@ -11,6 +11,7 @@ const visitorParkingRoutes = require('./routes/visitorParking');
 const visitorParkingManagementRoutes = require('./routes/visitorParkingManagement');
 const settingsRoutes = require('./routes/settings');
 const elevatorBookingRoutes = require('./routes/elevatorBooking');
+const rentalStoragesRoutes = require('./routes/rentalStorages');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -71,6 +72,7 @@ app.use('/visitor-parking', visitorParkingRoutes);
 app.use('/visitor-management', visitorParkingManagementRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/elevator-booking', elevatorBookingRoutes);
+app.use('/rental-storages', rentalStoragesRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
