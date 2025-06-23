@@ -34,8 +34,12 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="photos" class="form-label">Photo (Optional)</label>
-                        <input type="file" class="form-control" id="photos" name="photos" accept="image/*" capture="environment" multiple>
+                        <label class="form-label">Photos (Optional)</label>
+                        <div class="mb-2 d-flex gap-2">
+                            <input type="file" class="form-control" id="uploadFiles" accept="image/*" multiple style="max-width:200px;">
+                            <input type="file" class="form-control" id="cameraInput" accept="image/*" capture="environment" style="max-width:200px;">
+                        </div>
+                        <div id="photoPreview" class="mb-2 d-flex flex-wrap gap-2"></div>
                     </div>
                     <button type="submit" class="btn btn-primary">Add Log Entry</button>
                     <button type="button" class="btn btn-success" id="nothingToReportBtn">Nothing to Report</button>
@@ -81,6 +85,46 @@
         const logsTableBody = document.getElementById('logsTableBody');
         const filterForm = document.getElementById('filterForm');
         const reportedAtInput = document.getElementById('reportedAt');
+
+        // --- Multi-image logic ---
+        let selectedImages = [];
+
+        function updatePhotoPreview() {
+            const preview = document.getElementById('photoPreview');
+            preview.innerHTML = '';
+            selectedImages.forEach((file, idx) => {
+                const url = URL.createObjectURL(file);
+                const div = document.createElement('div');
+                div.style.position = 'relative';
+                div.innerHTML = `
+                    <img src="${url}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #ccc;">
+                    <button type="button" class="btn btn-sm btn-danger" style="position:absolute;top:0;right:0;padding:2px 6px;" onclick="removeImage(${idx})">&times;</button>
+                `;
+                preview.appendChild(div);
+            });
+        }
+
+        window.removeImage = function(idx) {
+            selectedImages.splice(idx, 1);
+            updatePhotoPreview();
+        };
+
+        document.getElementById('uploadFiles').addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                selectedImages.push(file);
+            }
+            updatePhotoPreview();
+            e.target.value = '';
+        });
+        document.getElementById('cameraInput').addEventListener('change', (e) => {
+            for (const file of e.target.files) {
+                selectedImages.push(file);
+            }
+            updatePhotoPreview();
+            e.target.value = '';
+        });
+
+        // --- End multi-image logic ---
 
         function setCurrentDateTime() {
             const now = new Date();
@@ -137,9 +181,8 @@
             const formData = new FormData();
             formData.append('reportedAt', reportedAtInput.value);
             formData.append('notes', document.getElementById('notes').value);
-            const photoFiles = document.getElementById('photos').files;
-            for (let i = 0; i < photoFiles.length; i++) {
-                formData.append('photos', photoFiles[i]);
+            for (let i = 0; i < selectedImages.length; i++) {
+                formData.append('photos', selectedImages[i]);
             }
             await submitLog(formData);
         });
@@ -160,6 +203,8 @@
                 });
                 if (res.ok) {
                     addLogForm.reset();
+                    selectedImages = [];
+                    updatePhotoPreview();
                     setCurrentDateTime();
                     loadCurrentWeek();
                 } else {
