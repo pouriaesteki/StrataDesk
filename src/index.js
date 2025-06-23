@@ -8,7 +8,6 @@ const { PrismaClient } = require('@prisma/client');
 
 const authRoutes = require('./routes/auth');
 const visitorParkingRoutes = require('./routes/visitorParking');
-const iamRoutes = require('./routes/iam');
 const visitorParkingManagementRoutes = require('./routes/visitorParkingManagement');
 
 const app = express();
@@ -37,12 +36,6 @@ app.get('/', (req, res) => {
       visitor: {
         register: 'POST /visitor/register',
         dashboard: 'GET /visitor/dashboard'
-      },
-      iam: {
-        users: 'GET /iam/users',
-        createUser: 'POST /iam/users',
-        updateUser: 'PUT /iam/users/:id',
-        deleteUser: 'DELETE /iam/users/:id'
       },
       health: 'GET /health'
     }
@@ -73,7 +66,6 @@ app.get('/dashboard/visitor-parking', (req, res) => {
 // API Routes
 app.use('/auth', authRoutes);
 app.use('/visitor-parking', visitorParkingRoutes);
-app.use('/iam', iamRoutes);
 app.use('/visitor-management', visitorParkingManagementRoutes);
 
 // Health check endpoint

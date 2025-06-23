@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -29,8 +29,7 @@ router.post('/register', async (req, res) => {
     const user = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
-        role
+        password: hashedPassword
       }
     });
 
@@ -40,8 +39,7 @@ router.post('/register', async (req, res) => {
     res.status(201).json({
       user: {
         id: user.id,
-        email: user.email,
-        role: user.role
+        email: user.email
       },
       token
     });
@@ -76,8 +74,7 @@ router.post('/login', async (req, res) => {
     res.json({
       user: {
         id: user.id,
-        email: user.email,
-        role: user.role
+        email: user.email
       },
       token
     });
@@ -91,10 +88,69 @@ router.get('/me', auth, async (req, res) => {
   res.json({
     user: {
       id: req.user.id,
-      email: req.user.email,
-      role: req.user.role
+      email: req.user.email
     }
   });
+});
+
+// Get all users
+router.get('/users', auth, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        unit: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Delete a user
+router.delete('/users/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({
+      where: { id }
+    });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+// Update user (e.g., change password)
+router.put('/users/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'New password is required' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        password: hashedPassword
+      }
+    });
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user' });
+  }
 });
 
 // Request password reset

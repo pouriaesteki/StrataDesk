@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const { auth, restrictTo } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 const prisma = new PrismaClient();
 
@@ -36,8 +36,8 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Protected route for Concierge and Owners to view parking requests
-router.get('/dashboard', auth, restrictTo('Concierge', 'Owner'), async (req, res) => {
+// Protected route for users to view parking requests
+router.get('/dashboard', auth, async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -52,11 +52,6 @@ router.get('/dashboard', auth, restrictTo('Concierge', 'Owner'), async (req, res
         lt: tomorrow
       }
     };
-
-    // If user is Owner, only show their unit's requests
-    if (req.user.role === 'Owner') {
-      baseQuery.unit = req.user.unit; // We'll need to add unit to User model
-    }
 
     // Get all active requests
     const activeRequests = await prisma.visitorParkingRequest.findMany({
@@ -128,8 +123,7 @@ router.get('/dashboard', auth, restrictTo('Concierge', 'Owner'), async (req, res
     }));
 
     res.json({
-      requests: processedRequests,
-      userRole: req.user.role
+      requests: processedRequests
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

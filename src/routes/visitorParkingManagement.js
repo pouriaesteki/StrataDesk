@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { PrismaClient } = require('@prisma/client');
-const { auth, restrictTo } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
