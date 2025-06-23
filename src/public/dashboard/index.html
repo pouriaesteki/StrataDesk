@@ -28,10 +28,6 @@
             transform: translateY(-5px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        .module-card.disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
         .module-icon {
             font-size: 2rem;
             margin-bottom: 1rem;
@@ -56,18 +52,9 @@
             <h1 class="mb-4">Dashboard</h1>
             
             <div class="row g-4">
-                <!-- IAM Module -->
-                <div class="col-md-6 col-lg-4">
-                    <a href="/dashboard/iam" class="module-card" data-module="iam">
-                        <div class="module-icon">👥</div>
-                        <div class="module-title">IAM</div>
-                        <div class="module-description">Identity and Access Management</div>
-                    </a>
-                </div>
-
                 <!-- Visitor Parking Module -->
                 <div class="col-md-6 col-lg-4">
-                    <a href="/dashboard/visitor-parking" class="module-card" data-module="visitor-parking">
+                    <a href="/dashboard/visitor-parking-management.html" class="module-card" data-module="visitor-parking">
                         <div class="module-icon">🚗</div>
                         <div class="module-title">Visitor Parking Report</div>
                         <div class="module-description">Manage and monitor visitor parking</div>
@@ -110,84 +97,6 @@
         if (!token) {
             window.location.href = '/auth/login';
         }
-
-        // Get user role
-        async function getUserRole() {
-            try {
-                const response = await fetch('/auth/me', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const data = await response.json();
-                return data.user.role;
-            } catch (error) {
-                console.error('Error getting user role:', error);
-                return null;
-            }
-        }
-
-        // Update module access based on role
-        async function updateModuleAccess() {
-            const role = await getUserRole();
-            const modules = {
-                iam: document.querySelector('[data-module="iam"]'),
-                visitorParking: document.querySelector('[data-module="visitor-parking"]'),
-                patrolReport: document.querySelector('[data-module="patrol-report"]'),
-                storageReport: document.querySelector('[data-module="storage-report"]'),
-                packageDelivery: document.querySelector('[data-module="package-delivery"]')
-            };
-
-            // Reset all modules to disabled
-            Object.values(modules).forEach(module => {
-                if (module) {
-                    module.classList.add('disabled');
-                    module.style.pointerEvents = 'none';
-                }
-            });
-
-            // Enable modules based on role
-            switch (role) {
-                case 'Owner':
-                    // Owners have access to all modules
-                    Object.values(modules).forEach(module => {
-                        if (module) {
-                            module.classList.remove('disabled');
-                            module.style.pointerEvents = 'auto';
-                        }
-                    });
-                    break;
-                case 'Concierge':
-                    // Concierge has access to all except IAM
-                    modules.visitorParking?.classList.remove('disabled');
-                    modules.patrolReport?.classList.remove('disabled');
-                    modules.storageReport?.classList.remove('disabled');
-                    modules.packageDelivery?.classList.remove('disabled');
-                    break;
-                case 'Council':
-                    // Council has access to Visitor Parking, Patrol Report, and Storage Report
-                    modules.visitorParking?.classList.remove('disabled');
-                    modules.patrolReport?.classList.remove('disabled');
-                    modules.storageReport?.classList.remove('disabled');
-                    break;
-                case 'PropertyManager':
-                    // Property Manager only has access to Storage Report
-                    modules.storageReport?.classList.remove('disabled');
-                    break;
-            }
-
-            // Enable pointer events for enabled modules
-            Object.values(modules).forEach(module => {
-                if (module && !module.classList.contains('disabled')) {
-                    module.style.pointerEvents = 'auto';
-                }
-            });
-        }
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', () => {
-            updateModuleAccess();
-        });
     </script>
 </body>
 </html> 
