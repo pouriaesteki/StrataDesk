@@ -44,29 +44,12 @@
                 <button class="nav-link active" id="parking-report-tab" data-bs-toggle="tab" data-bs-target="#parking-report" type="button" role="tab">Parking Report</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="patrol-inspection-tab" data-bs-toggle="tab" data-bs-target="#patrol-inspection" type="button" role="tab">Patrol & Inspection</button>
-            </li>
-            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="violation-report-tab" data-bs-toggle="tab" data-bs-target="#violation-report" type="button" role="tab">Violation Report</button>
             </li>
         </ul>
         <div class="tab-content" id="vpmTabContent">
             <!-- Parking Report -->
             <div class="tab-pane fade show active" id="parking-report" role="tabpanel">
-                <!-- Filters -->
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <form id="parkingReportFilterForm">
-                            <div class="row">
-                                <div class="col-md-3"><input type="date" class="form-control" name="startDate"></div>
-                                <div class="col-md-3"><input type="date" class="form-control" name="endDate"></div>
-                                <div class="col-md-2"><input type="text" class="form-control" name="unit" placeholder="Unit #"></div>
-                                <div class="col-md-2"><input type="text" class="form-control" name="plate" placeholder="Plate #"></div>
-                                <div class="col-md-2"><button type="submit" class="btn btn-primary">Filter</button></div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
                 <!-- Table -->
                 <div class="table-responsive mt-3">
                     <table class="table table-bordered">
@@ -75,20 +58,21 @@
                                 <th>Vehicle Make</th>
                                 <th>Plate Number</th>
                                 <th>Unit</th>
-                                <th>Duration (H)</th>
-                                <th>Registered At</th>
                                 <th>Expires At</th>
+                                <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="parkingReportTable"></tbody>
                     </table>
                 </div>
-            </div>
-            <!-- Patrol & Inspection -->
-            <div class="tab-pane fade" id="patrol-inspection" role="tabpanel">
-                <div class="card mt-3">
+                <!-- Patrol & Inspection Form -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>Manual Patrol / Inspection Entry</h5>
+                    </div>
                     <div class="card-body">
-                        <form id="inspectionForm" enctype="multipart/form-data">
+                        <form id="inspectionForm">
                             <div class="row">
                                 <div class="col-md-4"><input type="text" class="form-control" name="plateNumber" placeholder="Plate Number" required></div>
                                 <div class="col-md-4"><input type="text" class="form-control" name="vehicleMake" placeholder="Vehicle Make" required></div>
@@ -175,39 +159,134 @@
 
         // Parking Report logic
         const token = localStorage.getItem('token');
-        async function loadParkingReport(filters = {}) {
-            let url = '/visitor-management/permits?';
-            const params = [];
-            if (filters.startDate) params.push(`startDate=${filters.startDate}`);
-            if (filters.endDate) params.push(`endDate=${filters.endDate}`);
-            if (filters.unit) params.push(`unit=${filters.unit}`);
-            if (filters.plate) params.push(`plate=${filters.plate}`);
-            url += params.join('&');
+        async function loadParkingReport() {
+            const today = new Date();
+            const startDate = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+            const endDate = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+
+            let url = `/visitor-management/permits?startDate=${startDate}&endDate=${endDate}`;
 
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             const tableBody = document.getElementById('parkingReportTable');
             tableBody.innerHTML = '';
             (data.permits || []).forEach(p => {
-                tableBody.innerHTML += `<tr>
+                const isExpired = new Date() > new Date(p.expiresAt);
+                const row = document.createElement('tr');
+                if (isExpired) {
+                    row.classList.add('table-warning');
+                }
+
+                row.innerHTML = `
                     <td>${p.vehicleMake}</td>
                     <td>${p.plateNumber}</td>
                     <td>${p.unit}</td>
-                    <td>${p.durationInHours}</td>
-                    <td>${new Date(p.createdAt).toLocaleString()}</td>
                     <td>${new Date(p.expiresAt).toLocaleString()}</td>
+                    <td>${isExpired ? '<span class="badge bg-warning">Expired</span>' : '<span class="badge bg-success">Active</span>'}</td>
+                    <td>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" onchange="handleStillThereChange(this, ${isExpired})">
+                            <label class="form-check-label">Still There?</label>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        function handleStillThereChange(checkbox, isExpired) {
+            const row = checkbox.closest('tr');
+            if (checkbox.checked && isExpired) {
+                row.classList.remove('table-warning');
+                row.classList.add('table-danger'); // Red for violation
+            } else if (isExpired) {
+                row.classList.remove('table-danger');
+                row.classList.add('table-warning');
+            }
+        }
+
+        document.getElementById('inspectionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const res = await fetch('/visitor-management/inspection', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (res.ok) {
+                    alert('Inspection submitted successfully.');
+                    e.target.reset();
+                    loadParkingReport(); // Refresh the report
+                } else {
+                    const err = await res.json();
+                    alert(`Error: ${err.error}`);
+                }
+            } catch (error) {
+                console.error('Inspection submission error:', error);
+                alert('An error occurred while submitting the inspection.');
+            }
+        });
+
+        async function loadViolationReport(filters = {}) {
+            let url = '/visitor-management/violations?';
+            const params = [];
+            if (filters.startDate) params.push(`startDate=${filters.startDate}`);
+            if (filters.endDate) params.push(`endDate=${filters.endDate}`);
+            url += params.join('&');
+
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+            const data = await res.json();
+            const tableBody = document.getElementById('violationReportTable');
+            tableBody.innerHTML = '';
+            (data.violations || []).forEach(v => {
+                const vehicleDetails = `${v.vehicleMake} (${v.vehicleColor})`;
+                tableBody.innerHTML += `<tr>
+                    <td>${v.plateNumber}</td>
+                    <td>${vehicleDetails}</td>
+                    <td>${v.stallNumber}</td>
+                    <td>${v.violationType}</td>
+                    <td>${new Date(v.issuedAt).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="generateLetter('${v.id}')" ${v.letter ? 'disabled' : ''}>
+                            ${v.letter ? 'Letter Issued' : 'Generate Letter'}
+                        </button>
+                    </td>
                 </tr>`;
             });
         }
-        document.getElementById('parkingReportFilterForm').addEventListener('submit', (e) => {
+
+        document.getElementById('violationFilterForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const filters = Object.fromEntries(formData.entries());
-            loadParkingReport(filters);
+            loadViolationReport(filters);
         });
+
+        async function generateLetter(violationId) {
+            if (!confirm('Are you sure you want to generate a violation letter?')) return;
+            try {
+                const res = await fetch(`/visitor-management/violation/${violationId}/letter`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Letter generated successfully!');
+                    window.open(data.pdfUrl, '_blank');
+                    loadViolationReport(); // Refresh the report
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error generating letter:', error);
+                alert('An error occurred while generating the letter.');
+            }
+        }
 
          // Initial load
          loadParkingReport();
+         loadViolationReport();
 
          const settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
          const settingsForm = document.getElementById('settingsForm');
