@@ -84,4 +84,21 @@ model Setting {
   consecutiveDaysLimit Int      @default(2)
   monthlyVisitLimit    Int      @default(7)
   updatedAt            DateTime @updatedAt
+}
+
+enum ElevatorBookingReason {
+  MOVING
+  RENO
+  DELIVERY
+}
+
+model ElevatorBooking {
+  id           String                @id @default(uuid())
+  unitNumber   String
+  duration     Int // in hours
+  bookingDate  DateTime
+  reason       ElevatorBookingReason
+  notes        String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 } 
