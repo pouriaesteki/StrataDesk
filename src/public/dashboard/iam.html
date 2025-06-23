@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrataDesk - User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="/components/NavBar.js"></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <div class="container mt-4">
+        <a href="/dashboard/" class="text-decoration-none mb-2 d-inline-block" style="font-size: 1.5rem;">
+            <span style="display: inline-block; transform: translateY(2px);">&#8592;</span> Back to Dashboard
+        </a>
+        <h1 class="mb-4">User Management</h1>
+
+        <!-- Add User Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                Add New User
+            </div>
+            <div class="card-body">
+                <form id="addUserForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="firstName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email (Username)</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- User List -->
+        <div class="card">
+            <div class="card-header">
+                Existing Users
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <!-- Users will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/auth/login';
+        }
+
+        const addUserForm = document.getElementById('addUserForm');
+        const userTableBody = document.getElementById('userTableBody');
+
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/auth/users', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const users = await response.json();
+                
+                userTableBody.innerHTML = '';
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.firstName || ''} ${user.lastName || ''}</td>
+                        <td>${user.email}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning me-2" onclick="resetPassword('${user.id}')">Reset Password</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')">Remove</button>
+                        </td>
+                    `;
+                    userTableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ firstName, lastName, email, password })
+                });
+
+                if (response.ok) {
+                    addUserForm.reset();
+                    fetchUsers();
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding user:', error);
+            }
+        });
+
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to remove this user?')) {
+                return;
+            }
+            try {
+                await fetch(`/auth/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                fetchUsers();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+            }
+        }
+
+        async function resetPassword(userId) {
+            const newPassword = prompt('Enter the new password for the user:');
+            if (!newPassword) {
+                return;
+            }
+            try {
+                await fetch(`/auth/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ password: newPassword })
+                });
+                alert('Password reset successfully.');
+            } catch (error) {
+                console.error('Error resetting password:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchUsers);
+    </script>
+</body>
+</html> 
