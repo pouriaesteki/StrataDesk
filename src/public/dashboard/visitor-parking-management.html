@@ -172,9 +172,11 @@
             tableBody.innerHTML = '';
             (data.permits || []).forEach(p => {
                 const isExpired = new Date() > new Date(p.expiresAt);
+                const hasViolation = p.violations && p.violations.length > 0;
                 const row = document.createElement('tr');
+
                 if (isExpired) {
-                    row.classList.add('table-warning');
+                    row.classList.add(hasViolation ? 'table-danger' : 'table-warning');
                 }
 
                 row.innerHTML = `
@@ -185,8 +187,8 @@
                     <td>${isExpired ? '<span class="badge bg-warning">Expired</span>' : '<span class="badge bg-success">Active</span>'}</td>
                     <td>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" onchange="handleStillThereChange(this, ${isExpired})">
-                            <label class="form-check-label">Still There?</label>
+                            <input class="form-check-input" type="checkbox" onchange='handleStillThereChange(this, ${JSON.stringify(p)})' ${hasViolation ? 'disabled' : ''}>
+                            <label class="form-check-label">${hasViolation ? 'Violation Created' : 'Still There?'}</label>
                         </div>
                     </td>
                 `;
@@ -194,14 +196,48 @@
             });
         }
         
-        function handleStillThereChange(checkbox, isExpired) {
+        async function handleStillThereChange(checkbox, permit) {
             const row = checkbox.closest('tr');
+            const isExpired = new Date() > new Date(permit.expiresAt);
+
+            if (!checkbox.checked) {
+                if (isExpired) {
+                    row.classList.remove('table-danger');
+                    row.classList.add('table-warning');
+                }
+                return;
+            }
+
             if (checkbox.checked && isExpired) {
                 row.classList.remove('table-warning');
-                row.classList.add('table-danger'); // Red for violation
-            } else if (isExpired) {
-                row.classList.remove('table-danger');
-                row.classList.add('table-warning');
+                row.classList.add('table-danger');
+
+                try {
+                    const res = await fetch('/visitor-management/violation/from-permit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ permitId: permit.id })
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                        alert('Violation record created automatically.');
+                        checkbox.disabled = true;
+                        checkbox.nextElementSibling.textContent = 'Violation Created';
+                        loadViolationReport();
+                    } else {
+                        row.classList.remove('table-danger');
+                        row.classList.add('table-warning');
+                        alert(`Error: ${result.error || 'Could not create violation.'}`);
+                    }
+                } catch (error) {
+                    console.error('Error creating violation:', error);
+                    row.classList.remove('table-danger');
+                    row.classList.add('table-warning');
+                    alert('An error occurred while creating the violation.');
+                }
             }
         }
 

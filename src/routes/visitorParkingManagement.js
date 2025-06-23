@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// GET /visitor/permits - Parking Report with filters
+// GET /visitor-management/permits - Parking Report with filters
 router.get('/permits', auth, async (req, res) => {
   try {
     const { startDate, endDate, unit, plate } = req.query;
@@ -43,6 +43,9 @@ router.get('/permits', auth, async (req, res) => {
     const permits = await prisma.visitorParkingRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        violations: { select: { id: true } }
+      }
     });
     res.json({ permits });
   } catch (error) {
@@ -51,7 +54,60 @@ router.get('/permits', auth, async (req, res) => {
   }
 });
 
-// POST /visitor/inspection - Patrol & Inspection
+// POST /visitor-management/violation/from-permit - Create violation from expired permit
+router.post('/violation/from-permit', auth, async (req, res) => {
+  try {
+    const { permitId } = req.body;
+    const inspectorId = req.user.id;
+
+    const permit = await prisma.visitorParkingRequest.findUnique({
+      where: { id: permitId }
+    });
+
+    if (!permit) {
+      return res.status(404).json({ error: 'Permit not found.' });
+    }
+
+    // Check if a violation for this permit already exists
+    const existingViolation = await prisma.violation.findFirst({
+      where: { permitId: permitId }
+    });
+
+    if (existingViolation) {
+      return res.status(400).json({ error: 'A violation for this permit already exists.' });
+    }
+
+    // Create Violation
+    const violation = await prisma.violation.create({
+      data: {
+        permitId: permit.id,
+        plateNumber: permit.plateNumber,
+        vehicleMake: permit.vehicleMake,
+        violationType: 'Expired Permit',
+        notes: 'Violation automatically generated from an expired permit marked as "Still There".'
+      }
+    });
+
+    // Create a corresponding inspection record
+    await prisma.parkingInspection.create({
+      data: {
+        inspectorId,
+        plateNumber: permit.plateNumber,
+        vehicleMake: permit.vehicleMake,
+        violationId: violation.id,
+        notes: 'Inspection automatically generated alongside violation for expired permit.'
+      }
+    });
+
+    res.status(201).json({ success: true, violationId: violation.id });
+
+  } catch (error) {
+    console.error('Error creating violation from permit:', error);
+    res.status(500).json({ error: 'Failed to create violation.' });
+  }
+});
+
+// POST /visitor-management/inspection - Manual Patrol & Inspection
 router.post('/inspection', auth, upload.single('photo'), async (req, res) => {
   try {
     const { plateNumber, vehicleMake, vehicleColor, stallNumber, notes } = req.body;
