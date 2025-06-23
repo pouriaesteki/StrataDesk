@@ -43,6 +43,14 @@
                         <div class="form-text">Maximum duration is 12 hours</div>
                     </div>
                     
+                    <div class="mb-3">
+                        <label for="stallNumber" class="form-label">Stall Number</label>
+                        <div class="input-group">
+                            <span class="input-group-text">V</span>
+                            <input type="number" class="form-control" id="stallNumber" min="1" required>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="btn btn-primary">Register Parking</button>
                 </form>
             </div>
@@ -57,7 +65,8 @@
                 vehicleMake: document.getElementById('vehicleMake').value,
                 plateNumber: document.getElementById('plateNumber').value,
                 unit: document.getElementById('unit').value,
-                durationInHours: parseInt(document.getElementById('durationInHours').value)
+                durationInHours: parseInt(document.getElementById('durationInHours').value),
+                stallNumber: 'V' + document.getElementById('stallNumber').value
             };
 
             try {
