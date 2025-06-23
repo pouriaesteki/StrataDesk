@@ -217,8 +217,11 @@
                 const response = await fetch('/settings', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                if (!response.ok) {
+                    throw new Error('Failed to fetch settings');
+                }
                 const settings = await response.json();
-                // Populate modal with current values in labels
+                
                 document.getElementById('labelMaxDurationHours').innerHTML = `Maximum Duration per Visit (Hours) <span class="text-muted fw-normal">(Current: ${settings.maxDurationHours})</span>`;
                 document.getElementById('maxDurationHours').value = settings.maxDurationHours;
 
@@ -251,7 +254,6 @@
                 if (response.ok) {
                     settingsModal.hide();
                     alert('Settings updated successfully!');
-                    // Refresh parking report to apply new rules
                     loadParkingReport();
                 } else {
                     alert('Failed to update settings.');
