@@ -76,4 +76,12 @@ model ParkingInspection {
   notes        String?
   violationId  String?  // link if this inspection resulted in a violation
   violation    Violation? @relation("ViolationToInspection", fields: [violationId], references: [id])
+}
+
+model Setting {
+  id                   Int      @id @default(1)
+  maxDurationHours     Int      @default(12)
+  consecutiveDaysLimit Int      @default(2)
+  monthlyVisitLimit    Int      @default(7)
+  updatedAt            DateTime @updatedAt
 } 

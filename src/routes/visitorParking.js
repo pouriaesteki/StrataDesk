@@ -53,6 +53,12 @@ router.get('/dashboard', auth, async (req, res) => {
       }
     };
 
+    // Fetch settings
+    let settings = await prisma.setting.findUnique({ where: { id: 1 } });
+    if (!settings) {
+      settings = { maxDurationHours: 12, consecutiveDaysLimit: 2, monthlyVisitLimit: 7 };
+    }
+
     // Get all active requests
     const activeRequests = await prisma.visitorParkingRequest.findMany({
       where: baseQuery,
@@ -66,14 +72,14 @@ router.get('/dashboard', auth, async (req, res) => {
       // Check for violations
       let violationStatus = 'NONE';
       
-      // Check duration violation (> 12 hours)
-      if (request.durationInHours > 12) {
+      // Check duration violation
+      if (request.durationInHours > settings.maxDurationHours) {
         violationStatus = 'VIOLATION';
       }
 
       // Check consecutive days violation
       const previousDay = new Date(today);
-      previousDay.setDate(previousDay.getDate() - 1);
+      previousDay.setDate(previousDay.getDate() - (settings.consecutiveDaysLimit - 1));
       
       const consecutiveRequests = await prisma.visitorParkingRequest.count({
         where: {
@@ -85,7 +91,7 @@ router.get('/dashboard', auth, async (req, res) => {
         }
       });
 
-      if (consecutiveRequests > 1) {
+      if (consecutiveRequests >= settings.consecutiveDaysLimit) {
         violationStatus = 'VIOLATION';
       }
 
@@ -103,7 +109,7 @@ router.get('/dashboard', auth, async (req, res) => {
         }
       });
 
-      if (monthlyRequests > 7) {
+      if (monthlyRequests > settings.monthlyVisitLimit) {
         violationStatus = 'VIOLATION';
       }
 
