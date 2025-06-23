@@ -118,9 +118,14 @@
             const dayOfWeek = today.getDay();
             const startDate = new Date(today);
             startDate.setDate(today.getDate() - dayOfWeek);
-            document.getElementById('filterStartDate').valueAsDate = startDate;
-            document.getElementById('filterEndDate').valueAsDate = new Date();
-            fetchLogs(startDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+
+            document.getElementById('filterStartDate').value = startDateStr;
+            document.getElementById('filterEndDate').value = todayStr;
+
+            fetchLogs(startDateStr, todayStr);
         }
 
         addLogForm.addEventListener('submit', async (e) => {
