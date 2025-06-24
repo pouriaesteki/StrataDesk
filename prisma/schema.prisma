@@ -145,4 +145,28 @@ model PatrolLogImage {
   patrolLog  PatrolLog @relation(fields: [patrolLogId], references: [id])
   patrolLogId String
   createdAt  DateTime @default(now())
+}
+
+model RenovationWork {
+  id                    String   @id @default(uuid())
+  unitNumber            String
+  startDate             DateTime
+  endDate               DateTime
+  damageDepositCheckNumber String?
+  isExempted            Boolean  @default(false)
+  description           String?
+  status                String   @default("ONGOING") // ONGOING, COMPLETED, CANCELLED
+  files                 RenovationWorkFile[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model RenovationWorkFile {
+  id               String         @id @default(uuid())
+  renovationWorkId String
+  renovationWork   RenovationWork @relation(fields: [renovationWorkId], references: [id])
+  fileName         String
+  fileUrl          String
+  fileType         String
+  createdAt        DateTime       @default(now())
 } 

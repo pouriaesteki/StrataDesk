@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrataDesk - Renovation Works</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="/components/NavBar.js"></script>
+    <style>
+        .file-preview {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .file-item .file-info {
+            flex: 1;
+        }
+        .file-item .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .exempted-badge {
+            background-color: #ffc107;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <div class="container mt-4">
+        <a href="/dashboard/" class="text-decoration-none mb-2 d-inline-block" style="font-size: 1.5rem;">
+            <span style="display: inline-block; transform: translateY(2px);">&#8592;</span> Back to Dashboard
+        </a>
+        <h1 class="mb-4">Renovation Works</h1>
+
+        <!-- Add Renovation Work Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Add New Renovation Work</h5>
+            </div>
+            <div class="card-body">
+                <form id="addRenovationForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="unitNumber" class="form-label">Unit Number *</label>
+                            <input type="text" class="form-control" id="unitNumber" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="startDate" class="form-label">Start Date *</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="endDate" class="form-label">End Date *</label>
+                            <input type="date" class="form-control" id="endDate" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status">
+                                <option value="ONGOING">Ongoing</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="CANCELLED">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="damageDepositCheckNumber" class="form-label">Damage Deposit Check Number</label>
+                            <input type="text" class="form-control" id="damageDepositCheckNumber">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="isExempted">
+                                <label class="form-check-label" for="isExempted">
+                                    Exempted from Damage Deposit
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="Describe the renovation work..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="files" class="form-label">Attach Files (Optional)</label>
+                        <input type="file" class="form-control" id="files" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        <div class="form-text">You can select multiple files. Maximum 10 files, 10MB each.</div>
+                    </div>
+                    <div id="filePreviewContainer" class="mb-3"></div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Renovation Work
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Filter Renovation Works</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="filterStartDate" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="filterStartDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterEndDate" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="filterEndDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filterUnitNumber" class="form-label">Unit Number</label>
+                        <input type="text" class="form-control" id="filterUnitNumber" placeholder="Enter unit number">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-secondary me-2">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="clearFilter">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-info btn-sm" id="showCurrentMonth">
+                        <i class="fas fa-calendar"></i> Show Current Month
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Renovation Works Report -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Renovation Works Report</h5>
+                <div>
+                    <span class="badge bg-primary" id="totalCount">0</span> records
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Unit</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Status</th>
+                                <th>Damage Deposit</th>
+                                <th>Description</th>
+                                <th>Files</th>
+                                <th>Elevator Bookings</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="renovationTableBody">
+                            <!-- Renovation works will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Renovation Work</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRenovationForm" enctype="multipart/form-data">
+                        <input type="hidden" id="editId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editUnitNumber" class="form-label">Unit Number *</label>
+                                <input type="text" class="form-control" id="editUnitNumber" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editStatus" class="form-label">Status</label>
+                                <select class="form-select" id="editStatus">
+                                    <option value="ONGOING">Ongoing</option>
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editStartDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="editStartDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="editEndDate" class="form-label">End Date *</label>
+                                <input type="date" class="form-control" id="editEndDate" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="editDamageDepositCheckNumber" class="form-label">Damage Deposit Check Number</label>
+                                <input type="text" class="form-control" id="editDamageDepositCheckNumber">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="editIsExempted">
+                                    <label class="form-check-label" for="editIsExempted">
+                                        Exempted from Damage Deposit
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="editDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editFiles" class="form-label">Add More Files</label>
+                            <input type="file" class="form-control" id="editFiles" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                        </div>
+                        <div id="editFilePreviewContainer" class="mb-3"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveEdit">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/auth/login';
+        }
+
+        let currentRenovationWorks = [];
+        const addRenovationForm = document.getElementById('addRenovationForm');
+        const renovationTableBody = document.getElementById('renovationTableBody');
+        const filterForm = document.getElementById('filterForm');
+        const clearFilterBtn = document.getElementById('clearFilter');
+        const showCurrentMonthBtn = document.getElementById('showCurrentMonth');
+        const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+        // File preview functionality
+        document.getElementById('files').addEventListener('change', function(e) {
+            const container = document.getElementById('filePreviewContainer');
+            container.innerHTML = '';
+            
+            Array.from(e.target.files).forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <strong>${file.name}</strong><br>
+                        <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                    <div class="file-actions">
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(fileItem);
+            });
+        });
+
+        function removeFile(index) {
+            const input = document.getElementById('files');
+            const dt = new DataTransfer();
+            const { files } = input;
+            
+            for (let i = 0; i < files.length; i++) {
+                if (i !== index) {
+                    dt.items.add(files[i]);
+                }
+            }
+            
+            input.files = dt.files;
+            document.getElementById('files').dispatchEvent(new Event('change'));
+        }
+
+        async function fetchRenovationWorks(params = {}) {
+            try {
+                const queryString = new URLSearchParams(params).toString();
+                const url = `/renovation-works${queryString ? '?' + queryString : ''}`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch renovation works');
+                }
+                
+                currentRenovationWorks = await response.json();
+                displayRenovationWorks(currentRenovationWorks);
+            } catch (error) {
+                console.error('Error fetching renovation works:', error);
+                alert('Error fetching renovation works: ' + error.message);
+            }
+        }
+
+        function displayRenovationWorks(renovationWorks) {
+            renovationTableBody.innerHTML = '';
+            document.getElementById('totalCount').textContent = renovationWorks.length;
+            
+            renovationWorks.forEach(work => {
+                const row = document.createElement('tr');
+                const statusClass = work.status === 'ONGOING' ? 'bg-warning' : 
+                                  work.status === 'COMPLETED' ? 'bg-success' : 'bg-secondary';
+                
+                row.innerHTML = `
+                    <td>${work.unitNumber}</td>
+                    <td>${new Date(work.startDate).toLocaleDateString()}</td>
+                    <td>${new Date(work.endDate).toLocaleDateString()}</td>
+                    <td><span class="badge ${statusClass} status-badge">${work.status}</span></td>
+                    <td>
+                        ${work.isExempted ? 
+                            '<span class="badge exempted-badge">Exempted</span>' : 
+                            (work.damageDepositCheckNumber || 'N/A')
+                        }
+                    </td>
+                    <td>${work.description || 'N/A'}</td>
+                    <td>
+                        ${work.files && work.files.length > 0 ? 
+                            work.files.map(file => `
+                                <a href="${file.fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary me-1" title="${file.fileName}">
+                                    <i class="fas fa-file"></i> ${file.fileName.substring(0, 15)}${file.fileName.length > 15 ? '...' : ''}
+                                </a>
+                            `).join('') : 
+                            'No files'
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" onclick="showElevatorBookings('${work.unitNumber}')">
+                            <i class="fas fa-elevator"></i> View
+                        </button>
+                    </td>
+                    <td>${new Date(work.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editRenovationWork('${work.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteRenovationWork('${work.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                renovationTableBody.appendChild(row);
+            });
+        }
+
+        async function showElevatorBookings(unitNumber) {
+            try {
+                const response = await fetch(`/elevator-booking/unit/${unitNumber}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch elevator bookings');
+                }
+                
+                const bookings = await response.json();
+                const renoBookings = bookings.filter(b => b.reason === 'RENO');
+                
+                if (renoBookings.length === 0) {
+                    alert('No elevator bookings found for renovation work in this unit.');
+                    return;
+                }
+                
+                let message = `Elevator bookings for renovation work in Unit ${unitNumber}:\n\n`;
+                renoBookings.forEach(booking => {
+                    message += `Date: ${new Date(booking.bookingDate).toLocaleDateString()}\n`;
+                    message += `Duration: ${booking.duration} hours\n`;
+                    message += `Notes: ${booking.notes || 'N/A'}\n`;
+                    message += `Booked on: ${new Date(booking.createdAt).toLocaleString()}\n\n`;
+                });
+                
+                alert(message);
+            } catch (error) {
+                console.error('Error fetching elevator bookings:', error);
+                alert('Error fetching elevator bookings: ' + error.message);
+            }
+        }
+
+        addRenovationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('unitNumber', document.getElementById('unitNumber').value);
+            formData.append('startDate', document.getElementById('startDate').value);
+            formData.append('endDate', document.getElementById('endDate').value);
+            formData.append('damageDepositCheckNumber', document.getElementById('damageDepositCheckNumber').value);
+            formData.append('isExempted', document.getElementById('isExempted').checked);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('status', document.getElementById('status').value);
+            
+            const files = document.getElementById('files').files;
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const response = await fetch('/renovation-works', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    addRenovationForm.reset();
+                    document.getElementById('filePreviewContainer').innerHTML = '';
+                    fetchRenovationWorks();
+                    alert('Renovation work added successfully!');
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error adding renovation work:', error);
+                alert('Error adding renovation work: ' + error.message);
+            }
+        });
+
+        filterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const params = {};
+            
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const unitNumber = document.getElementById('filterUnitNumber').value;
+            
+            if (startDate) params.startDate = startDate;
+            if (endDate) params.endDate = endDate;
+            if (unitNumber) params.unitNumber = unitNumber;
+            
+            fetchRenovationWorks(params);
+        });
+
+        clearFilterBtn.addEventListener('click', () => {
+            filterForm.reset();
+            fetchRenovationWorks();
+        });
+
+        showCurrentMonthBtn.addEventListener('click', () => {
+            fetchRenovationWorks({ currentMonth: 'true' });
+        });
+
+        function editRenovationWork(id) {
+            const work = currentRenovationWorks.find(w => w.id === id);
+            if (!work) return;
+            
+            document.getElementById('editId').value = work.id;
+            document.getElementById('editUnitNumber').value = work.unitNumber;
+            document.getElementById('editStartDate').value = work.startDate.split('T')[0];
+            document.getElementById('editEndDate').value = work.endDate.split('T')[0];
+            document.getElementById('editDamageDepositCheckNumber').value = work.damageDepositCheckNumber || '';
+            document.getElementById('editIsExempted').checked = work.isExempted;
+            document.getElementById('editDescription').value = work.description || '';
+            document.getElementById('editStatus').value = work.status;
+            
+            // Display existing files
+            const container = document.getElementById('editFilePreviewContainer');
+            container.innerHTML = '';
+            if (work.files && work.files.length > 0) {
+                work.files.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <strong>${file.fileName}</strong><br>
+                            <small>Existing file</small>
+                        </div>
+                        <div class="file-actions">
+                            <a href="${file.fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteFile('${work.id}', '${file.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(fileItem);
+                });
+            }
+            
+            editModal.show();
+        }
+
+        document.getElementById('saveEdit').addEventListener('click', async () => {
+            const id = document.getElementById('editId').value;
+            const formData = new FormData();
+            
+            formData.append('unitNumber', document.getElementById('editUnitNumber').value);
+            formData.append('startDate', document.getElementById('editStartDate').value);
+            formData.append('endDate', document.getElementById('editEndDate').value);
+            formData.append('damageDepositCheckNumber', document.getElementById('editDamageDepositCheckNumber').value);
+            formData.append('isExempted', document.getElementById('editIsExempted').checked);
+            formData.append('description', document.getElementById('editDescription').value);
+            formData.append('status', document.getElementById('editStatus').value);
+            
+            const files = document.getElementById('editFiles').files;
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            try {
+                const response = await fetch(`/renovation-works/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    editModal.hide();
+                    fetchRenovationWorks();
+                    alert('Renovation work updated successfully!');
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error updating renovation work:', error);
+                alert('Error updating renovation work: ' + error.message);
+            }
+        });
+
+        async function deleteRenovationWork(id) {
+            if (!confirm('Are you sure you want to delete this renovation work record?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/renovation-works/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    fetchRenovationWorks();
+                    alert('Renovation work deleted successfully!');
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error deleting renovation work:', error);
+                alert('Error deleting renovation work: ' + error.message);
+            }
+        }
+
+        async function deleteFile(renovationId, fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/renovation-works/${renovationId}/files/${fileId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    editRenovationWork(renovationId); // Refresh the modal
+                    fetchRenovationWorks(); // Refresh the table
+                    alert('File deleted successfully!');
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`);
+                }
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                alert('Error deleting file: ' + error.message);
+            }
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if we have a unit number in URL params (from elevator booking redirect)
+            const urlParams = new URLSearchParams(window.location.search);
+            const unitNumber = urlParams.get('unitNumber');
+            if (unitNumber) {
+                document.getElementById('unitNumber').value = unitNumber;
+                // Clear the URL parameter
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            fetchRenovationWorks();
+        });
+    </script>
+</body>
+</html> 

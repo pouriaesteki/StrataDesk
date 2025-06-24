@@ -147,14 +147,31 @@
                 });
 
                 if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Handle renovation work integration
+                    if (bookingData.reason === 'RENO' && !result.renovationWorkExists) {
+                        const createRenovationWork = confirm(
+                            'No renovation work record found for this unit. Would you like to create a renovation work record now?'
+                        );
+                        
+                        if (createRenovationWork) {
+                            // Redirect to renovation works page with pre-filled unit number
+                            window.location.href = `/dashboard/renovation-works.html?unitNumber=${bookingData.unitNumber}`;
+                            return;
+                        }
+                    }
+                    
                     addBookingForm.reset();
                     fetchBookings();
+                    alert('Booking added successfully!');
                 } else {
                     const errorData = await response.json();
                     alert(`Error: ${errorData.error}`);
                 }
             } catch (error) {
                 console.error('Error adding booking:', error);
+                alert('Error adding booking: ' + error.message);
             }
         });
 
