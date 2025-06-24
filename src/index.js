@@ -5,6 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const { LOG_PATH } = require('./utils/actionLogger');
 
 const authRoutes = require('./routes/auth');
 const visitorParkingRoutes = require('./routes/visitorParking');
@@ -97,6 +98,11 @@ process.on('uncaughtException', (error) => {
 // Global error handler for unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+app.get('/action-logs', require('./middleware/auth').auth, (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  res.sendFile(LOG_PATH);
 });
 
 const PORT = process.env.PORT || 3000;

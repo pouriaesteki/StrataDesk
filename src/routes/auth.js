@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { auth } = require('../middleware/auth');
 const crypto = require('crypto');
+const { appendLog } = require('../utils/actionLogger');
 
 const prisma = new PrismaClient();
 
@@ -68,16 +69,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+    // Generate JWT
+    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email
-      },
-      token
-    });
+    // Log the login action
+    appendLog(user.email, 'LOGIN', 'Success');
+
+    res.json({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName, unit: user.unit } });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
