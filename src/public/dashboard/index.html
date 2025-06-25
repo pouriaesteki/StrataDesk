@@ -51,7 +51,7 @@
         <div class="container">
             <h1 class="mb-4 d-flex align-items-center justify-content-between">
                 Dashboard
-                <a href="/action-logs" target="_blank" title="View Action Logs" style="font-size: 1.5rem; margin-left: 10px;">📝</a>
+                <button id="viewLogsBtn" title="View Action Logs" style="font-size: 1.5rem; margin-left: 10px; background: none; border: none; cursor: pointer;">📝</button>
             </h1>
             
             <div class="row g-4">
@@ -145,6 +145,31 @@
                 grayOutModule('[data-module="iam"]');
             }
         });
+    </script>
+    <script>
+    document.getElementById('viewLogsBtn').addEventListener('click', async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('You must be logged in to view logs.');
+        return;
+      }
+      const response = await fetch('/action-logs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        alert('Failed to fetch logs: ' + (await response.text()));
+        return;
+      }
+      const logText = await response.text();
+      // Download as file
+      const blob = new Blob([logText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'action-logs.log';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
     </script>
 </body>
 </html> 
