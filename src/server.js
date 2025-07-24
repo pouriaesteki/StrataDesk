@@ -5,6 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const visitorParkingRoutes = require('./routes/visitorParking');
 const iamRoutes = require('./routes/iam');
+const vehicleRegistrationRoutes = require('./routes/vehicleRegistration');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use('/visitor-parking', visitorParkingRoutes);
 app.use('/iam', iamRoutes);
+app.use('/vehicle-registration', vehicleRegistrationRoutes);
 
 // Serve static files
 app.get('*', (req, res) => {
