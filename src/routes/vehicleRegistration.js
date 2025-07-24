@@ -47,4 +47,18 @@ router.get('/units', async (req, res) => {
   }
 });
 
+// Get all vehicles for a specific unit
+router.get('/unit/:unitNumber', async (req, res) => {
+  try {
+    const { unitNumber } = req.params;
+    const vehicles = await prisma.registeredVehicle.findMany({
+      where: { unitNumber },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(vehicles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router; 

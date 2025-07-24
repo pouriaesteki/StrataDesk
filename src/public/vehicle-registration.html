@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Registration Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .remove-btn { color: #dc3545; cursor: pointer; }
+        .remove-btn:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">StrataDesk</a>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <a href="/" class="text-decoration-none mb-2 d-inline-block" style="font-size: 1.5rem;">
+            <span style="display: inline-block; transform: translateY(2px);">&#8592;</span> Back to Home
+        </a>
+        <h1>Register Your Vehicle(s)</h1>
+        <form id="vehicleForm">
+            <div class="mb-3">
+                <label for="unitNumber" class="form-label">Unit Number <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="unitNumber" name="unitNumber" required>
+            </div>
+            <div class="mb-3">
+                <label for="residentType" class="form-label">Are you a Renter or Owner?</label>
+                <select class="form-select" id="residentType" name="residentType" required>
+                    <option value="OWNER">Owner</option>
+                    <option value="RENTER">Renter</option>
+                </select>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="noVehicle" name="noVehicle">
+                <label class="form-check-label" for="noVehicle">I don't have a vehicle</label>
+            </div>
+            <div id="vehiclesSection">
+                <h5>Vehicle(s)</h5>
+                <div id="vehiclesList"></div>
+                <button type="button" class="btn btn-secondary mt-2" id="addVehicleBtn">+ Add Another Vehicle</button>
+            </div>
+            <button type="submit" class="btn btn-primary mt-4">Submit</button>
+        </form>
+        <div id="resultMsg" class="mt-3"></div>
+    </div>
+    <script>
+        // Dynamic vehicle fields
+        let vehicleCount = 0;
+        function createVehicleFields(idx) {
+            return `
+            <div class="card mb-3 vehicle-card" data-idx="${idx}">
+                <div class="card-body row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label">Plate Number</label>
+                        <input type="text" class="form-control" name="plateNumber" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Car Model</label>
+                        <input type="text" class="form-control" name="carModel" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Make</label>
+                        <input type="text" class="form-control" name="make" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Colour</label>
+                        <input type="text" class="form-control" name="colour" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Parking Stall Number</label>
+                        <input type="text" class="form-control" name="parkingStall">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-center">
+                        <span class="remove-btn ms-2" onclick="removeVehicle(${idx})">Remove</span>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function addVehicle() {
+            const vehiclesList = document.getElementById('vehiclesList');
+            vehiclesList.insertAdjacentHTML('beforeend', createVehicleFields(vehicleCount));
+            vehicleCount++;
+        }
+
+        window.removeVehicle = function(idx) {
+            const card = document.querySelector(`.vehicle-card[data-idx='${idx}']`);
+            if (card) card.remove();
+        };
+
+        document.getElementById('addVehicleBtn').addEventListener('click', addVehicle);
+
+        // Hide/show vehicles section if 'no vehicle' is checked
+        document.getElementById('noVehicle').addEventListener('change', function() {
+            document.getElementById('vehiclesSection').style.display = this.checked ? 'none' : '';
+        });
+
+        // Add one vehicle field by default
+        addVehicle();
+
+        // Form submission
+        document.getElementById('vehicleForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const unitNumber = document.getElementById('unitNumber').value.trim();
+            const residentType = document.getElementById('residentType').value;
+            const noVehicle = document.getElementById('noVehicle').checked;
+            let vehicles = [];
+            if (!noVehicle) {
+                document.querySelectorAll('#vehiclesList .vehicle-card').forEach(card => {
+                    const plateNumber = card.querySelector('[name="plateNumber"]').value.trim();
+                    const carModel = card.querySelector('[name="carModel"]').value.trim();
+                    const make = card.querySelector('[name="make"]').value.trim();
+                    const colour = card.querySelector('[name="colour"]').value.trim();
+                    const parkingStall = card.querySelector('[name="parkingStall"]').value.trim();
+                    vehicles.push({ plateNumber, carModel, make, colour, parkingStall });
+                });
+            }
+            const payload = { unitNumber, residentType, noVehicle, vehicles };
+            try {
+                const res = await fetch('/vehicle-registration', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                const resultMsg = document.getElementById('resultMsg');
+                if (res.ok) {
+                    resultMsg.innerHTML = `<div class='alert alert-success'>${data.message}</div>`;
+                    this.reset();
+                    document.getElementById('vehiclesList').innerHTML = '';
+                    vehicleCount = 0;
+                    addVehicle();
+                } else {
+                    resultMsg.innerHTML = `<div class='alert alert-danger'>${data.error || 'Error occurred.'}</div>`;
+                }
+            } catch (err) {
+                document.getElementById('resultMsg').innerHTML = `<div class='alert alert-danger'>${err.message}</div>`;
+            }
+        });
+    </script>
+</body>
+</html> 
