@@ -294,6 +294,25 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
   }
 });
 
+// POST /visitor-management/violation/:id/photo - Upload a photo for a violation
+router.post('/violation/:id/photo', auth, upload.single('photo'), async (req, res) => {
+  try {
+    const violationId = req.params.id;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No photo uploaded.' });
+    }
+    const photoUrl = `/uploads/${req.file.filename}`;
+    await prisma.violation.update({
+      where: { id: violationId },
+      data: { photoUrl }
+    });
+    res.json({ success: true, photoUrl });
+  } catch (error) {
+    console.error('Error uploading violation photo:', error);
+    res.status(500).json({ error: 'Failed to upload photo.' });
+  }
+});
+
 // GET /visitor/violation/:id/letter - Download violation letter PDF
    router.get('/violations', auth, async (req, res) => {
      try {

@@ -112,6 +112,7 @@
                                 <th>Vehicle Details</th>
                                 <th>Stall</th>
                                 <th>Violation Type</th>
+                                <th>Photo</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -323,18 +324,51 @@
             });
             Object.keys(grouped).forEach(plate => {
                 // Plate heading row
-                tableBody.innerHTML += `<tr style="background:#f8f9fa;font-weight:bold;"><td colspan="5">Plate: ${plate} (${grouped[plate].length} violation${grouped[plate].length > 1 ? 's' : ''})</td></tr>`;
+                tableBody.innerHTML += `<tr style="background:#f8f9fa;font-weight:bold;"><td colspan="6">Plate: ${plate} (${grouped[plate].length} violation${grouped[plate].length > 1 ? 's' : ''})</td></tr>`;
                 grouped[plate].forEach(v => {
                     const vehicleDetails = `${v.vehicleMake} (${v.vehicleColor})`;
+                    const photoInputId = `photoInput_${v.id}`;
+                    const issueBtnId = `issueBtn_${v.id}`;
                     tableBody.innerHTML += `<tr>
                         <td>${v.plateNumber}</td>
                         <td>${vehicleDetails}</td>
                         <td>${v.stallNumber}</td>
                         <td>${v.violationType}</td>
                         <td>
-                            ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick='openViolationLetterModal(${JSON.stringify(v)})'>Issue Letter</button>`)}
+                            <input type="file" id="${photoInputId}" accept="image/*" capture="environment" style="max-width:120px;">
+                            <div id="photoStatus_${v.id}" style="font-size:0.9em;"></div>
+                        </td>
+                        <td>
+                            ${(v.letter ? `<a href=\"${v.letter.pdfUrl}\" target=\"_blank\" class=\"btn btn-sm btn-outline-primary mb-1\">${v.letter.type || 'Letter'}</a>` : `<button class=\"btn btn-sm btn-primary mb-1\" id=\"${issueBtnId}\" onclick='openViolationLetterModal(${JSON.stringify(v)})' disabled>Issue Letter</button>`)}
                         </td>
                     </tr>`;
+                    setTimeout(() => {
+                        const input = document.getElementById(photoInputId);
+                        const btn = document.getElementById(issueBtnId);
+                        if (input && btn) {
+                            input.addEventListener('change', async function() {
+                                if (!input.files || !input.files[0]) return;
+                                const formData = new FormData();
+                                formData.append('photo', input.files[0]);
+                                document.getElementById(`photoStatus_${v.id}`).textContent = 'Uploading...';
+                                try {
+                                    const res = await fetch(`/visitor-management/violation/${v.id}/photo`, {
+                                        method: 'POST',
+                                        headers: { 'Authorization': `Bearer ${token}` },
+                                        body: formData
+                                    });
+                                    if (res.ok) {
+                                        document.getElementById(`photoStatus_${v.id}`).textContent = 'Photo uploaded.';
+                                        btn.disabled = false;
+                                    } else {
+                                        document.getElementById(`photoStatus_${v.id}`).textContent = 'Upload failed.';
+                                    }
+                                } catch (err) {
+                                    document.getElementById(`photoStatus_${v.id}`).textContent = 'Upload error.';
+                                }
+                            });
+                        }
+                    }, 0);
                 });
             });
         }
