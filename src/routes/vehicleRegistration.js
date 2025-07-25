@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { auth } = require('../middleware/auth');
 
 // Register vehicles (multiple at once)
 router.post('/', async (req, res) => {
@@ -54,6 +55,18 @@ router.get('/unit/:unitNumber', async (req, res) => {
     const vehicles = await prisma.registeredVehicle.findMany({
       where: { unitNumber },
       orderBy: { createdAt: 'desc' }
+    });
+    res.json(vehicles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all registered vehicles (protected)
+router.get('/all', auth, async (req, res) => {
+  try {
+    const vehicles = await prisma.registeredVehicle.findMany({
+      orderBy: [{ unitNumber: 'asc' }, { createdAt: 'desc' }]
     });
     res.json(vehicles);
   } catch (err) {
