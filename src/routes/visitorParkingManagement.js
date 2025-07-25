@@ -223,6 +223,7 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
     const timeStr = now.toLocaleTimeString();
 
     // Generate PDF
+    console.log('Starting PDF generation for violation', violationId);
     const doc = new PDFDocument();
     const pdfDir = path.join(process.cwd(), 'uploads', 'letters');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
@@ -267,7 +268,11 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
     doc.text('For and on behalf of Strata Council LMS-2518');
     doc.end();
 
+    let responded = false;
     stream.on('finish', async () => {
+      if (responded) return;
+      responded = true;
+      console.log('PDF generation finished for violation', violationId);
       await prisma.violationLetter.create({
         data: {
           violationId,
@@ -276,6 +281,12 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
         }
       });
       res.json({ pdfUrl, type: letterType });
+    });
+    stream.on('error', (err) => {
+      if (responded) return;
+      responded = true;
+      console.error('PDF stream error for violation', violationId, err);
+      res.status(500).json({ error: 'Failed to generate violation letter PDF.' });
     });
   } catch (error) {
     console.error('Error generating violation letter:', error);
