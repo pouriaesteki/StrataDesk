@@ -25,35 +25,21 @@
         if (!token) {
             window.location.href = '/auth/login';
         }
-        // Get user's unit number from token (assume JWT payload has 'unit')
-        function parseJwt (token) {
-            try {
-                return JSON.parse(atob(token.split('.')[1]));
-            } catch (e) {
-                return null;
-            }
-        }
-        const payload = parseJwt(token);
-        const unitNumber = payload && payload.unit;
-        if (!unitNumber) {
-            document.getElementById('vehicleInfo').innerHTML = '<div class="alert alert-danger">Unit number not found in your profile.</div>';
-        } else {
-            // Fetch all vehicles for all units (protected)
-            fetch('/vehicle-registration/all', { headers: { 'Authorization': `Bearer ${token}` } })
-                .then(res => res.json())
-                .then(vehicles => {
-                    if (!vehicles.length) {
-                        document.getElementById('vehicleInfo').innerHTML = '<div class="alert alert-warning">No vehicles registered yet.</div>';
-                        return;
-                    }
-                    let html = `<table class='table'><thead><tr><th>Unit</th><th>Plate Number</th><th>Car Model</th><th>Make</th><th>Colour</th><th>Parking Stall</th><th>Resident Type</th></tr></thead><tbody>`;
-                    vehicles.forEach(v => {
-                        html += `<tr><td>${v.unitNumber}</td><td>${v.plateNumber}</td><td>${v.carModel}</td><td>${v.make}</td><td>${v.colour}</td><td>${v.parkingStall || ''}</td><td>${v.residentType}</td></tr>`;
-                    });
-                    html += '</tbody></table>';
-                    document.getElementById('vehicleInfo').innerHTML = html;
+        // Fetch all vehicles for all units (protected)
+        fetch('/vehicle-registration/all', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(res => res.json())
+            .then(vehicles => {
+                if (!vehicles.length) {
+                    document.getElementById('vehicleInfo').innerHTML = '<div class="alert alert-warning">No vehicles registered yet.</div>';
+                    return;
+                }
+                let html = `<table class='table'><thead><tr><th>Unit</th><th>Plate Number</th><th>Car Model</th><th>Make</th><th>Colour</th><th>Parking Stall</th><th>Resident Type</th></tr></thead><tbody>`;
+                vehicles.forEach(v => {
+                    html += `<tr><td>${v.unitNumber}</td><td>${v.plateNumber}</td><td>${v.carModel}</td><td>${v.make}</td><td>${v.colour}</td><td>${v.parkingStall || ''}</td><td>${v.residentType}</td></tr>`;
                 });
-        }
+                html += '</tbody></table>';
+                document.getElementById('vehicleInfo').innerHTML = html;
+            });
     </script>
 </body>
 </html> 
