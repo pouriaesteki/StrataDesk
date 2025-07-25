@@ -181,6 +181,7 @@ router.post('/inspection', auth, upload.single('photo'), async (req, res) => {
 router.post('/violation/:id/letter', auth, async (req, res) => {
   try {
     const violationId = req.params.id;
+    const { reasons = [] } = req.body;
     const violation = await prisma.violation.findUnique({
       where: { id: violationId }
     });
@@ -188,10 +189,30 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
       return res.status(404).json({ error: 'Violation not found' });
     }
 
-    // Prevent duplicate letters
-    const existingLetter = await prisma.violationLetter.findUnique({
-      where: { violationId }
+    // Count previous violations for this plate (excluding this one)
+    const previousViolations = await prisma.violation.findMany({
+      where: {
+        plateNumber: violation.plateNumber,
+        id: { not: violationId }
+      },
+      orderBy: { issuedAt: 'asc' }
     });
+    let letterType = 'First Violation';
+    let letterParagraph = 'This vehicle is in violation of the Visitor Parking Rules of Strata Plan LMS-2518.';
+    if (previousViolations.length === 1) {
+      letterType = 'Second Notice';
+      letterParagraph = 'This is the second notice of violation, next time vehicle in violation of any bylaws or rules will be towed without notice at the vehicle owner\'s expense.';
+    } else if (previousViolations.length >= 2) {
+      letterType = 'Tow Request';
+      letterParagraph = 'This vehicle is subject to immediate tow due to repeated violations.';
+      // Optionally, update violationType to Tow Request
+      await prisma.violation.update({ where: { id: violationId }, data: { violationType: 'Tow Request' } });
+    } else {
+      await prisma.violation.update({ where: { id: violationId }, data: { violationType: letterType } });
+    }
+
+    // Allow multiple letters for the same plate (one per violation)
+    const existingLetter = await prisma.violationLetter.findUnique({ where: { violationId } });
     if (existingLetter) {
       return res.status(400).json({ error: 'A letter for this violation already exists.', pdfUrl: existingLetter.pdfUrl });
     }
@@ -210,7 +231,7 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
     const stream = fs.createWriteStream(pdfPath);
     doc.pipe(stream);
 
-    // Letter content (your provided wording)
+    // Letter content
     doc.fontSize(16).text('PARKING VIOLATION NOTICE', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text('Strata Plan LMS-2518', { align: 'center' });
@@ -225,15 +246,11 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
     doc.text(`• Color: ${violation.vehicleColor}`);
     doc.moveDown();
     doc.text('Violation Description:');
-    doc.text('[ ] Vehicle parked in a non-designated area');
-    doc.text('[ ] No visitor permit or resident information displayed on dashboard');
-    doc.text('[ ] Exceeded maximum time limit');
-    doc.text('[ ] Resident vehicle parked in visitor parking');
-    doc.text('[ ] Other:');
+    reasons.forEach(r => doc.text(`[x] ${r}`));
     doc.moveDown();
     doc.text(`Notes: ${violation.notes || ''}`);
     doc.moveDown();
-    doc.text('This vehicle is in violation of the Visitor Parking Rules of Strata Plan LMS-2518.');
+    doc.text(letterParagraph);
     doc.moveDown();
     doc.text('Visitor parking is strictly reserved for guests of residents on a first-come, first-served basis. The following restrictions apply:');
     doc.text('• Maximum of 12 hours per visit');
@@ -251,14 +268,14 @@ router.post('/violation/:id/letter', auth, async (req, res) => {
     doc.end();
 
     stream.on('finish', async () => {
-      // Save to DB
       await prisma.violationLetter.create({
         data: {
           violationId,
-          pdfUrl
+          pdfUrl,
+          type: letterType
         }
       });
-      res.json({ pdfUrl });
+      res.json({ pdfUrl, type: letterType });
     });
   } catch (error) {
     console.error('Error generating violation letter:', error);

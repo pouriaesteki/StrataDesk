@@ -112,7 +112,6 @@
                                 <th>Vehicle Details</th>
                                 <th>Stall</th>
                                 <th>Violation Type</th>
-                                <th>Issued At</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -150,6 +149,44 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Violation Letter Modal -->
+    <div class="modal fade" id="violationLetterModal" tabindex="-1" aria-labelledby="violationLetterModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="violationLetterModalLabel">Issue Violation Letter</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="violationLetterForm">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="reason1" name="reasons" value="Vehicle parked in a non-designated area">
+                <label class="form-check-label" for="reason1">Vehicle parked in a non-designated area</label>
+              </div>
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="reason2" name="reasons" value="No visitor permit submitted">
+                <label class="form-check-label" for="reason2">No visitor permit submitted</label>
+              </div>
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="reason3" name="reasons" value="Exceeded maximum time limit">
+                <label class="form-check-label" for="reason3">Exceeded maximum time limit</label>
+              </div>
+              <input type="text" class="form-control mb-2" id="timeLimitDetail" name="timeLimitDetail" placeholder="Specify which rule (e.g., 12 hours, 2 days, 7 days/month)">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="reason4" name="reasons" value="Resident vehicle parked in visitor parking">
+                <label class="form-check-label" for="reason4">Resident vehicle parked in visitor parking</label>
+              </div>
+              <input type="hidden" id="violationIdForLetter" name="violationId">
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="submitViolationLetter">Issue Letter</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -284,11 +321,8 @@
                     <td>${vehicleDetails}</td>
                     <td>${v.stallNumber}</td>
                     <td>${v.violationType}</td>
-                    <td>${new Date(v.issuedAt).toLocaleString()}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="generateLetter('${v.id}')" ${v.letter ? 'disabled' : ''}>
-                            ${v.letter ? 'Letter Issued' : 'Generate Letter'}
-                        </button>
+                        ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick="openViolationLetterModal('${v.id}')">Issue Letter</button>`)}
                     </td>
                 </tr>`;
             });
@@ -321,6 +355,50 @@
                 alert('An error occurred while generating the letter.');
             }
         }
+
+        function openViolationLetterModal(violationId) {
+            document.getElementById('violationIdForLetter').value = violationId;
+            // Reset form
+            document.getElementById('violationLetterForm').reset();
+            const modal = new bootstrap.Modal(document.getElementById('violationLetterModal'));
+            modal.show();
+        }
+
+        document.getElementById('submitViolationLetter').addEventListener('click', async function() {
+            const form = document.getElementById('violationLetterForm');
+            const violationId = document.getElementById('violationIdForLetter').value;
+            const reasons = Array.from(form.querySelectorAll('input[name="reasons"]:checked')).map(cb => cb.value);
+            const timeLimitDetail = document.getElementById('timeLimitDetail').value.trim();
+            if (reasons.length === 0) {
+                alert('Please select at least one violation reason.');
+                return;
+            }
+            // If exceeded time is selected, append detail
+            let finalReasons = reasons.map(r => {
+                if (r === 'Exceeded maximum time limit' && timeLimitDetail) {
+                    return r + ' (' + timeLimitDetail + ')';
+                }
+                return r;
+            });
+            try {
+                const res = await fetch(`/visitor-management/violation/${violationId}/letter`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ reasons: finalReasons })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert('Letter generated successfully!');
+                    window.open(data.pdfUrl, '_blank');
+                    loadViolationReport();
+                    bootstrap.Modal.getInstance(document.getElementById('violationLetterModal')).hide();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert('An error occurred while generating the letter.');
+            }
+        });
 
          // Initial load
          loadParkingReport();
