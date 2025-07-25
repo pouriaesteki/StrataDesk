@@ -315,17 +315,27 @@
             const data = await res.json();
             const tableBody = document.getElementById('violationReportTable');
             tableBody.innerHTML = '';
+            // Group by plate number
+            const grouped = {};
             (data.violations || []).forEach(v => {
-                const vehicleDetails = `${v.vehicleMake} (${v.vehicleColor})`;
-                tableBody.innerHTML += `<tr>
-                    <td>${v.plateNumber}</td>
-                    <td>${vehicleDetails}</td>
-                    <td>${v.stallNumber}</td>
-                    <td>${v.violationType}</td>
-                    <td>
-                        ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick='openViolationLetterModal(${JSON.stringify(v)})'>Issue Letter</button>`)}
-                    </td>
-                </tr>`;
+                if (!grouped[v.plateNumber]) grouped[v.plateNumber] = [];
+                grouped[v.plateNumber].push(v);
+            });
+            Object.keys(grouped).forEach(plate => {
+                // Plate heading row
+                tableBody.innerHTML += `<tr style="background:#f8f9fa;font-weight:bold;"><td colspan="5">Plate: ${plate} (${grouped[plate].length} violation${grouped[plate].length > 1 ? 's' : ''})</td></tr>`;
+                grouped[plate].forEach(v => {
+                    const vehicleDetails = `${v.vehicleMake} (${v.vehicleColor})`;
+                    tableBody.innerHTML += `<tr>
+                        <td>${v.plateNumber}</td>
+                        <td>${vehicleDetails}</td>
+                        <td>${v.stallNumber}</td>
+                        <td>${v.violationType}</td>
+                        <td>
+                            ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick='openViolationLetterModal(${JSON.stringify(v)})'>Issue Letter</button>`)}
+                        </td>
+                    </tr>`;
+                });
             });
         }
 
