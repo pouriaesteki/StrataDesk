@@ -322,7 +322,7 @@
                     <td>${v.stallNumber}</td>
                     <td>${v.violationType}</td>
                     <td>
-                        ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick="openViolationLetterModal('${v.id}')">Issue Letter</button>`)}
+                        ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" onclick='openViolationLetterModal(${JSON.stringify(v)})'>Issue Letter</button>`)}
                     </td>
                 </tr>`;
             });
@@ -356,49 +356,84 @@
             }
         }
 
-        function openViolationLetterModal(violationId) {
-            document.getElementById('violationIdForLetter').value = violationId;
+        // Update openViolationLetterModal to accept the violation object and pre-select reasons
+        function openViolationLetterModal(violation) {
+            document.getElementById('violationIdForLetter').value = violation.id;
             // Reset form
             document.getElementById('violationLetterForm').reset();
+            // Auto-select reason based on violationType or notes
+            if (violation.violationType) {
+                if (violation.violationType.toLowerCase().includes('non-designated')) {
+                    document.getElementById('reason1').checked = true;
+                }
+                if (violation.violationType.toLowerCase().includes('no permit')) {
+                    document.getElementById('reason2').checked = true;
+                }
+                if (violation.violationType.toLowerCase().includes('time limit') || violation.violationType.toLowerCase().includes('duration')) {
+                    document.getElementById('reason3').checked = true;
+                }
+                if (violation.violationType.toLowerCase().includes('resident')) {
+                    document.getElementById('reason4').checked = true;
+                }
+            }
+            // Optionally, parse notes for more clues
+            if (violation.notes) {
+                if (violation.notes.toLowerCase().includes('non-designated')) {
+                    document.getElementById('reason1').checked = true;
+                }
+                if (violation.notes.toLowerCase().includes('no permit')) {
+                    document.getElementById('reason2').checked = true;
+                }
+                if (violation.notes.toLowerCase().includes('time limit') || violation.notes.toLowerCase().includes('duration')) {
+                    document.getElementById('reason3').checked = true;
+                }
+                if (violation.notes.toLowerCase().includes('resident')) {
+                    document.getElementById('reason4').checked = true;
+                }
+            }
             const modal = new bootstrap.Modal(document.getElementById('violationLetterModal'));
             modal.show();
         }
 
-        document.getElementById('submitViolationLetter').addEventListener('click', async function() {
-            const form = document.getElementById('violationLetterForm');
-            const violationId = document.getElementById('violationIdForLetter').value;
-            const reasons = Array.from(form.querySelectorAll('input[name="reasons"]:checked')).map(cb => cb.value);
-            const timeLimitDetail = document.getElementById('timeLimitDetail').value.trim();
-            if (reasons.length === 0) {
-                alert('Please select at least one violation reason.');
-                return;
-            }
-            // If exceeded time is selected, append detail
-            let finalReasons = reasons.map(r => {
-                if (r === 'Exceeded maximum time limit' && timeLimitDetail) {
-                    return r + ' (' + timeLimitDetail + ')';
+        // Ensure the event listener for submitViolationLetter is attached only once
+        if (!window.violationLetterListenerAttached) {
+            document.getElementById('submitViolationLetter').addEventListener('click', async function() {
+                const form = document.getElementById('violationLetterForm');
+                const violationId = document.getElementById('violationIdForLetter').value;
+                const reasons = Array.from(form.querySelectorAll('input[name="reasons"]:checked')).map(cb => cb.value);
+                const timeLimitDetail = document.getElementById('timeLimitDetail').value.trim();
+                if (reasons.length === 0) {
+                    alert('Please select at least one violation reason.');
+                    return;
                 }
-                return r;
-            });
-            try {
-                const res = await fetch(`/visitor-management/violation/${violationId}/letter`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ reasons: finalReasons })
+                // If exceeded time is selected, append detail
+                let finalReasons = reasons.map(r => {
+                    if (r === 'Exceeded maximum time limit' && timeLimitDetail) {
+                        return r + ' (' + timeLimitDetail + ')';
+                    }
+                    return r;
                 });
-                const data = await res.json();
-                if (res.ok) {
-                    alert('Letter generated successfully!');
-                    window.open(data.pdfUrl, '_blank');
-                    loadViolationReport();
-                    bootstrap.Modal.getInstance(document.getElementById('violationLetterModal')).hide();
-                } else {
-                    alert(`Error: ${data.error}`);
+                try {
+                    const res = await fetch(`/visitor-management/violation/${violationId}/letter`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ reasons: finalReasons })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert('Letter generated successfully!');
+                        window.open(data.pdfUrl, '_blank');
+                        loadViolationReport();
+                        bootstrap.Modal.getInstance(document.getElementById('violationLetterModal')).hide();
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                } catch (error) {
+                    alert('An error occurred while generating the letter.');
                 }
-            } catch (error) {
-                alert('An error occurred while generating the letter.');
-            }
-        });
+            });
+            window.violationLetterListenerAttached = true;
+        }
 
          // Initial load
          loadParkingReport();
