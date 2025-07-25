@@ -34,7 +34,9 @@
                     
                     <div class="mb-3">
                         <label for="unit" class="form-label">Unit Number</label>
-                        <input type="text" class="form-control" id="unit" required>
+                        <select class="form-select" id="unit" required>
+                            <option value="">Select Unit</option>
+                        </select>
                     </div>
                     
                     <div class="mb-3">
@@ -58,17 +60,51 @@
     </div>
 
     <script>
+        // Populate unit number dropdown
+        async function fetchUnits() {
+            try {
+                const res = await fetch('/vehicle-registration/units');
+                const units = await res.json();
+                const select = document.getElementById('unit');
+                select.innerHTML = '<option value="">Select Unit</option>';
+                units.forEach(unit => {
+                    const opt = document.createElement('option');
+                    opt.value = unit;
+                    opt.textContent = unit;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                // fallback: leave dropdown empty
+            }
+        }
+        fetchUnits();
+
         document.getElementById('parkingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+            // Validate all fields
+            const vehicleMake = document.getElementById('vehicleMake').value.trim();
+            const plateNumber = document.getElementById('plateNumber').value.trim();
+            const unit = document.getElementById('unit').value;
+            const durationInHours = document.getElementById('durationInHours').value.trim();
+            const stallNumber = document.getElementById('stallNumber').value.trim();
+            let valid = true;
+            let msg = '';
+            if (!vehicleMake) { valid = false; msg = 'Vehicle make is required.'; }
+            else if (!plateNumber) { valid = false; msg = 'Plate number is required.'; }
+            else if (!unit) { valid = false; msg = 'Unit number is required.'; }
+            else if (!durationInHours) { valid = false; msg = 'Duration is required.'; }
+            else if (!stallNumber) { valid = false; msg = 'Stall number is required.'; }
+            if (!valid) {
+                alert(msg);
+                return;
+            }
             const data = {
-                vehicleMake: document.getElementById('vehicleMake').value,
-                plateNumber: document.getElementById('plateNumber').value,
-                unit: document.getElementById('unit').value,
-                durationInHours: parseInt(document.getElementById('durationInHours').value),
-                stallNumber: 'V' + document.getElementById('stallNumber').value
+                vehicleMake,
+                plateNumber,
+                unit,
+                durationInHours: parseInt(durationInHours),
+                stallNumber: 'V' + stallNumber
             };
-
             try {
                 const response = await fetch('/visitor-parking/register', {
                     method: 'POST',
@@ -77,9 +113,7 @@
                     },
                     body: JSON.stringify(data)
                 });
-
                 const result = await response.json();
-
                 if (response.ok) {
                     alert('Parking request registered successfully!');
                     e.target.reset();
