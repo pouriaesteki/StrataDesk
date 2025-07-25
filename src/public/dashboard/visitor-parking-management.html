@@ -329,17 +329,21 @@
                     const vehicleDetails = `${v.vehicleMake} (${v.vehicleColor})`;
                     const photoInputId = `photoInput_${v.id}`;
                     const issueBtnId = `issueBtn_${v.id}`;
+                    const photoStatusId = `photoStatus_${v.id}`;
+                    let photoCell = '';
+                    if (v.photoUrl) {
+                        photoCell = `<a href="${v.photoUrl}" target="_blank" class="btn btn-sm btn-outline-success">View Photo</a>`;
+                    } else {
+                        photoCell = `<input type="file" id="${photoInputId}" accept="image/*" capture="environment" style="max-width:120px;">\n<div id="${photoStatusId}" style="font-size:0.9em;"></div>`;
+                    }
                     tableBody.innerHTML += `<tr>
                         <td>${v.plateNumber}</td>
                         <td>${vehicleDetails}</td>
                         <td>${v.stallNumber}</td>
                         <td>${v.violationType}</td>
+                        <td>${photoCell}</td>
                         <td>
-                            <input type="file" id="${photoInputId}" accept="image/*" capture="environment" style="max-width:120px;">
-                            <div id="photoStatus_${v.id}" style="font-size:0.9em;"></div>
-                        </td>
-                        <td>
-                            ${(v.letter ? `<a href=\"${v.letter.pdfUrl}\" target=\"_blank\" class=\"btn btn-sm btn-outline-primary mb-1\">${v.letter.type || 'Letter'}</a>` : `<button class=\"btn btn-sm btn-primary mb-1\" id=\"${issueBtnId}\" onclick='openViolationLetterModal(${JSON.stringify(v)})' disabled>Issue Letter</button>`)}
+                            ${(v.letter ? `<a href="${v.letter.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-primary mb-1">${v.letter.type || 'Letter'}</a>` : `<button class="btn btn-sm btn-primary mb-1" id="${issueBtnId}" onclick='openViolationLetterModal(${JSON.stringify(v)})' ${v.photoUrl ? '' : 'disabled'}>Issue Letter</button>`)}
                         </td>
                     </tr>`;
                     setTimeout(() => {
@@ -350,7 +354,7 @@
                                 if (!input.files || !input.files[0]) return;
                                 const formData = new FormData();
                                 formData.append('photo', input.files[0]);
-                                document.getElementById(`photoStatus_${v.id}`).textContent = 'Uploading...';
+                                document.getElementById(photoStatusId).textContent = 'Uploading...';
                                 try {
                                     const res = await fetch(`/visitor-management/violation/${v.id}/photo`, {
                                         method: 'POST',
@@ -358,13 +362,15 @@
                                         body: formData
                                     });
                                     if (res.ok) {
-                                        document.getElementById(`photoStatus_${v.id}`).textContent = 'Photo uploaded.';
+                                        const data = await res.json();
+                                        document.getElementById(photoStatusId).innerHTML = `<a href="${data.photoUrl}" target="_blank" class="btn btn-sm btn-outline-success">View Photo</a>`;
+                                        input.style.display = 'none';
                                         btn.disabled = false;
                                     } else {
-                                        document.getElementById(`photoStatus_${v.id}`).textContent = 'Upload failed.';
+                                        document.getElementById(photoStatusId).textContent = 'Upload failed.';
                                     }
                                 } catch (err) {
-                                    document.getElementById(`photoStatus_${v.id}`).textContent = 'Upload error.';
+                                    document.getElementById(photoStatusId).textContent = 'Upload error.';
                                 }
                             });
                         }
