@@ -61,6 +61,7 @@ model ViolationLetter {
   id           String   @id @default(uuid())
   violationId  String   @unique
   pdfUrl       String   // path to PDF file
+  type         String   // letter type: First Violation, Second Notice, etc.
   createdAt    DateTime @default(now())
   violation    Violation @relation(fields: [violationId], references: [id])
 }
