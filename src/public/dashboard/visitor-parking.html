@@ -105,9 +105,7 @@
         // Populate unit number dropdown
         async function fetchUnits() {
             try {
-                const res = await fetch('/vehicle-registration/units', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await fetch('/vehicle-registration/units');
                 const units = await res.json();
                 const select = document.getElementById('unitNumber');
                 select.innerHTML = '<option value="">Select Unit</option>';
@@ -126,28 +124,37 @@
         // Visitor parking form submission
         document.getElementById('visitorParkingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            // Validate all fields
             const unit = document.getElementById('unitNumber').value;
             const vehicleMake = document.getElementById('vehicleMake').value.trim();
             const plateNumber = document.getElementById('plateNumber').value.trim();
-            const durationInHours = parseInt(document.getElementById('durationInHours').value, 10);
-            const payload = { unit, vehicleMake, plateNumber, durationInHours };
+            const durationInHours = document.getElementById('durationInHours').value.trim();
+            let valid = true;
+            let msg = '';
+            if (!unit) { valid = false; msg = 'Unit number is required.'; }
+            else if (!vehicleMake) { valid = false; msg = 'Vehicle make is required.'; }
+            else if (!plateNumber) { valid = false; msg = 'Plate number is required.'; }
+            else if (!durationInHours) { valid = false; msg = 'Duration is required.'; }
+            if (!valid) {
+                document.getElementById('visitorFormMsg').innerHTML = `<div class='alert alert-danger'>${msg}</div>`;
+                return;
+            }
+            const payload = { unit, vehicleMake, plateNumber, durationInHours: parseInt(durationInHours, 10) };
             try {
                 const res = await fetch('/visitor-parking/register', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                const msg = document.getElementById('visitorFormMsg');
                 if (res.ok) {
-                    msg.innerHTML = `<div class='alert alert-success'>${data.message}</div>`;
+                    document.getElementById('visitorFormMsg').innerHTML = `<div class='alert alert-success'>${data.message}</div>`;
                     this.reset();
                     fetchParkingRequests();
                 } else {
-                    msg.innerHTML = `<div class='alert alert-danger'>${data.error || 'Error occurred.'}</div>`;
+                    document.getElementById('visitorFormMsg').innerHTML = `<div class='alert alert-danger'>${data.error || 'Error occurred.'}</div>`;
                 }
             } catch (err) {
                 document.getElementById('visitorFormMsg').innerHTML = `<div class='alert alert-danger'>${err.message}</div>`;
